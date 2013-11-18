@@ -14,6 +14,12 @@ To install the dependencies on OSX install MacPorts (http://www.macports.org/) a
 sudo port install boost libcryptopp
 ```
 
+On Debian Linux (or Ubuntu) install Boost and Crypto++ with aptitude:
+
+```bash
+sudo apt-get install libboost-dev libcrypto++-dev
+```
+
 You can compile the code using cmake and run one of the executables 'test' (unit test of message class) or 'simulation':
 
 ```bash
