@@ -21,17 +21,19 @@ namespace cdax {
         return this->publicKey;
     }
 
-    TopicKeyPair::TopicKeyPair(int enc_len, int auth_len)
-    {
-        this->encryptionKey = cdax::generateKey(enc_len);
-        this->authenticationKey = cdax::generateKey(auth_len);
-    }
+    TopicKeyPair::TopicKeyPair() {};
 
     TopicKeyPair::TopicKeyPair(std::string source)
     {
         std::stringstream ss(source);
         boost::archive::text_iarchive ia(ss);
         ia >> *this;
+    }
+
+    TopicKeyPair::TopicKeyPair(CryptoPP::SecByteBlock enc_key, CryptoPP::SecByteBlock auth_key)
+    {
+        this->encryptionKey = enc_key;
+        this->authenticationKey = auth_key;
     }
 
     std::string TopicKeyPair::toString()
@@ -102,27 +104,6 @@ namespace cdax {
         std::string str(length, 0);
         std::generate_n(str.begin(), length, randchar);
         return str;
-    }
-
-    CryptoPP::SecByteBlock generateKey(size_t length)
-    {
-        // Pseudo Random Number Generator
-        CryptoPP::AutoSeededRandomPool prng;
-        CryptoPP::SecByteBlock key(length);
-        prng.GenerateBlock(key, key.size());
-        return key;
-    }
-
-    RSAKeyPair generateKeyPair(size_t length)
-    {
-        // Pseudo Random Number Generator
-        CryptoPP::AutoSeededRandomPool prng;
-        // Generate Parameters
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(prng, length);
-        // return keypair
-        RSAKeyPair keyPair(params);
-        return keyPair;
     }
 
 }

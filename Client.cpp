@@ -8,28 +8,29 @@ namespace cdax {
         this->topics.push_back(topic_name);
         this->topic_ports[topic_name] = port_number;
 
-        // wait one second before requesting topic keys
-        usleep(1000000);
-
         Message request;
         request.setId(this->id);
         request.setTopic(topic_name);
         request.setData("topic_join");
+
         request.sign(this->key_pair.getPrivate());
 
-        this->log("sent topic join request for" + topic_name, request);
+        this->log("sent topic join request for " + topic_name);
 
         Message response = send(request, port_number);
 
         response.decrypt(this->key_pair.getPrivate());
+        response.verify(this->sec_server_key);
 
-        TopicKeyPair *kp = new TopicKeyPair(response.getData());
-        this->topic_keys[topic_name] = *kp;
+        this->log("received topic keys for " + topic_name);
+
+        TopicKeyPair kp(response.getData());
+        this->topic_keys[topic_name] = kp;
     }
 
-    std::string Client::getId()
+    void Client::setServer(CryptoPP::RSA::PublicKey key)
     {
-        return this->id;
+        this->sec_server_key = key;
     }
 
     Publisher::Publisher(std::string identity, RSAKeyPair kp)
@@ -47,15 +48,18 @@ namespace cdax {
 
     void Publisher::generateRandom()
     {
-        Message msg;
-        std::string random_topic;
-
         for (;;)
         {
-            // wait one second before sending the next message
-            usleep(1000000);
+            // wait random time before sending the next message
+            this->sleep();
 
-            random_topic = this->topics[rand() % this->topics.size()];
+            if (this->topics.size() == 0) {
+                continue;
+            }
+
+            std::string random_topic = this->topics[rand() % this->topics.size()];
+
+            Message msg;
 
             msg.setId(this->id);
             msg.setTopic(random_topic);

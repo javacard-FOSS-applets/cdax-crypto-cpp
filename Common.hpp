@@ -1,3 +1,4 @@
+#pragma once
 
 #include <cstdlib>
 #include <iomanip>
@@ -54,8 +55,9 @@ namespace cdax {
     class TopicKeyPair
     {
     public:
-        TopicKeyPair(int enc_len = 16, int auth_len = 16);
+        TopicKeyPair();
         TopicKeyPair(std::string source);
+        TopicKeyPair(CryptoPP::SecByteBlock enc_key, CryptoPP::SecByteBlock auth_key);
 
         CryptoPP::SecByteBlock getEncKey();
         CryptoPP::SecByteBlock getAuthKey();
@@ -105,8 +107,4 @@ namespace cdax {
     std::string hex(CryptoPP::RSA::PublicKey key);
 
     std::string randomString(size_t length);
-
-    CryptoPP::SecByteBlock generateKey(size_t length);
-
-    RSAKeyPair generateKeyPair(size_t length);
 }

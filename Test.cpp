@@ -7,6 +7,23 @@ using namespace cdax;
 
 const std::string line = std::string(80, '#');
 
+RSAKeyPair generateKeyPair(size_t length)
+{
+    CryptoPP::AutoSeededRandomPool prng;
+    CryptoPP::InvertibleRSAFunction params;
+    params.GenerateRandomWithKeySize(prng, length);
+    RSAKeyPair keyPair(params);
+    return keyPair;
+}
+
+CryptoPP::SecByteBlock generateKey(size_t length)
+{
+    CryptoPP::AutoSeededRandomPool prng;
+    CryptoPP::SecByteBlock key(length);
+    prng.GenerateBlock(key, key.size());
+    return key;
+}
+
 void testAES_CBC()
 {
     Message *msg = new Message();
@@ -95,7 +112,7 @@ void testRSA()
 
 void testTopicKeyPair()
 {
-    TopicKeyPair kp1 = TopicKeyPair(16, 16);
+    TopicKeyPair kp1 = TopicKeyPair(generateKey(16), generateKey(16));
     std::cout << hex(kp1.getEncKey()) << " - " << hex(kp1.getAuthKey()) << std::endl;
     std::string archive = kp1.toString();
     std::cout << archive << std::endl;

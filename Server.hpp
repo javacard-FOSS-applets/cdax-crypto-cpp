@@ -1,14 +1,17 @@
 
 #include <boost/unordered_map.hpp>
 
+#include "Common.hpp"
 #include "Message.hpp"
-#include "Network.hpp"
+#include "Host.hpp"
+#include "Client.hpp"
 
 namespace cdax {
 
-    class Node : public Network
+    class Node : public Host
     {
     private:
+        boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> clients;
         boost::unordered_map<std::string, std::vector<std::string>> subscribers;
         boost::unordered_map<std::string, std::string> sub_ports;
         boost::unordered_map<std::string, CryptoPP::SecByteBlock> topic_keys;
@@ -18,25 +21,39 @@ namespace cdax {
         Message handle(Message msg);
 
     public:
-        Node(std::string identity, std::string port_number, std::string server_port);
-        void addTopic(std::string topic_name, CryptoPP::SecByteBlock auth_key);
+        Node(std::string identity, std::string port_number, RSAKeyPair kp);
+        void addTopic(std::string topic_name);
         void addSubscriber(std::string topic_name, std::string sub_name, std::string sub_port);
+
+        void setClients(boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> clnts);
+        void setServer(std::string port, CryptoPP::RSA::PublicKey key);
 
     };
 
-    class SecurityServer : public Network
+    class SecurityServer : public Host
     {
     private:
-        boost::unordered_map<std::string, TopicKeyPair> topic_keys;
-        boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> client_public_keys;
+        boost::unordered_map<std::string, TopicKeyPair> topics;
+        boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> nodes;
+        boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> clients;
+
+        CryptoPP::AutoSeededRandomPool prng;
+
+        CryptoPP::SecByteBlock generateKey(size_t length);
+        RSAKeyPair generateKeyPair(size_t length);
 
     protected:
         Message handle(Message msg);
 
     public:
         SecurityServer(std::string identity, std::string port_number);
-        void addTopic(std::string topic_name, TopicKeyPair topic_key_pair);
-        void addClient(std::string client_name, CryptoPP::RSA::PublicKey public_key);
+
+        void addTopic(std::string topic_name);
+        Node addNode(std::string node_name, std::string port);
+        Publisher addPublisher(std::string client_name);
+        Subscriber addSubscriber(std::string client_name, std::string port);
+
+
     };
 
 };

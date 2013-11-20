@@ -1,17 +1,13 @@
 
-#include "Network.hpp"
+#include "Host.hpp"
 
 namespace cdax {
 
-    boost::mutex Network::io_mutex;
+    boost::mutex Host::io_mutex;
 
-    void Network::serve()
+    void Host::serve()
     {
-        this->log(" listening on port ");
-        {
-            boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
-            std::cout << RED << this->id << " listening on port " << this->port << std::endl;
-        }
+        this->log("listening on port " + this->port);
 
         boost::asio::io_service io_service;
         boost::asio::ip::tcp::endpoint endpoint(
@@ -35,21 +31,27 @@ namespace cdax {
         }
     }
 
-    std::string Network::getPort()
+    std::string Host::getId()
+    {
+        return this->id;
+    }
+
+    std::string Host::getPort()
     {
         return this->port;
     }
 
-    Message Network::handle(Message request)
+    Message Host::handle(Message request)
     {
         // function stub, acts as echo server
         return request;
     }
 
-    Message Network::send(Message request, std::string port)
+    Message Host::send(Message request, std::string port)
     {
-        boost::asio::ip::tcp::iostream stream(ip, port);
+        boost::asio::ip::tcp::iostream stream(this->ip, port);
         boost::archive::text_oarchive oa(stream);
+
         oa << request;
 
         Message response;
@@ -59,13 +61,24 @@ namespace cdax {
         return response;
     }
 
-    void Network::log(std::string text)
+    void Host::sleep()
+    {
+        int random = 2000 + std::rand() % 2000;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(random));
+    }
+
+    void Host::sleep(int seconds)
+    {
+        boost::this_thread::sleep(boost::posix_time::seconds(seconds));
+    }
+
+    void Host::log(std::string text)
     {
         boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
         std::cout << this->color << this->id << " " << text << std::endl;
     }
 
-    void Network::log(std::string text, Message msg)
+    void Host::log(std::string text, Message msg)
     {
         boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
         std::cout << this->color << this->id << " " << text << std::endl << msg;

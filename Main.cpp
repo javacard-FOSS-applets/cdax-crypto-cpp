@@ -2,7 +2,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "Message.hpp"
-#include "Network.hpp"
+#include "Host.hpp"
 #include "Client.hpp"
 #include "Server.hpp"
 
@@ -10,49 +10,45 @@ using namespace cdax;
 
 int main(int argc, char* argv[])
 {
-    RSAKeyPair s0_kp = generateKeyPair(1024);
-    RSAKeyPair s1_kp = generateKeyPair(1024);
-    RSAKeyPair p0_kp = generateKeyPair(1024);
-
-    SecurityServer *s = new SecurityServer("sec_server", "7000");
-    Node *n0 = new Node("node_o", "6000", s->getPort());
-    Subscriber *s0 = new Subscriber("subscriber_0", "5000", s0_kp);
-    Subscriber *s1 = new Subscriber("subscriber_1", "5001", s1_kp);
-    Publisher *p0 = new Publisher("publisher_0", p0_kp);
-
-    TopicKeyPair *kp;
-    std::string topic_name;
-
-    s->addClient(s0->getId(), s0_kp.getPublic());
-    s->addClient(s1->getId(), s1_kp.getPublic());
-    s->addClient(p0->getId(), p0_kp.getPublic());
-
     boost::thread_group thrds;
-    thrds.create_thread(std::bind(&SecurityServer::serve, s));
-    thrds.create_thread(std::bind(&Node::serve, n0));
 
-    for (int i = 0; i < 4; ++i) {
-        kp = new TopicKeyPair(16, CryptoPP::AES::DEFAULT_KEYLENGTH);
-        topic_name = "topic_" + boost::lexical_cast<std::string>(i);
+    SecurityServer s("sec_server", "7000");
 
-        s->addTopic(topic_name, *kp);
-        n0->addTopic(topic_name, kp->getAuthKey());
+    s.addTopic("topic_1");
+    s.addTopic("topic_2");
+    s.addTopic("topic_3");
 
-        n0->addSubscriber(topic_name, s0->getId(), s0->getPort());
-        s0->addTopic(topic_name, n0->getPort());
+    thrds.create_thread(std::bind(&SecurityServer::serve, &s));
 
-        if (i > 1) {
-            n0->addSubscriber(topic_name, s1->getId(), s1->getPort());
-            s1->addTopic(topic_name, n0->getPort());
-        }
+    Node n1 = s.addNode("node_1", "6001");
+    Node n2 = s.addNode("node_2", "6002");
 
-        p0->setCipher(Cipher::AES_GCM);
-        p0->addTopic(topic_name, n0->getPort());
-    }
+    Publisher p1 = s.addPublisher("publisher_1");
+    Publisher p2 = s.addPublisher("publisher_2");
+    Subscriber s1 = s.addSubscriber("subscriber_1", "5001");
+    Subscriber s2 = s.addSubscriber("subscriber_2", "5002");
 
-    thrds.create_thread(std::bind(&Subscriber::serve, s0));
-    thrds.create_thread(std::bind(&Subscriber::serve, s1));
-    thrds.create_thread(std::bind(&Publisher::generateRandom, p0));
+    thrds.create_thread(std::bind(&Node::serve, &n1));
+    thrds.create_thread(std::bind(&Node::serve, &n2));
+
+    p1.addTopic("topic_1", "6001");
+    p1.addTopic("topic_3", "6002");
+    p2.addTopic("topic_2", "6001");
+
+    n1.addSubscriber("topic_1", "subscriber_1", "5001");
+    n2.addSubscriber("topic_3", "subscriber_1", "5001");
+    n1.addSubscriber("topic_2", "subscriber_2", "5002");
+    n2.addSubscriber("topic_3", "subscriber_2", "5002");
+
+    s1.addTopic("topic_1", "6001");
+    s1.addTopic("topic_3", "6002");
+    s2.addTopic("topic_2", "6001");
+    s2.addTopic("topic_3", "6002");
+
+    thrds.create_thread(std::bind(&Subscriber::serve, &s1));
+    thrds.create_thread(std::bind(&Subscriber::serve, &s2));
+    thrds.create_thread(std::bind(&Publisher::generateRandom, &p1));
+    thrds.create_thread(std::bind(&Publisher::generateRandom, &p2));
 
     thrds.join_all();
 

@@ -181,6 +181,7 @@ namespace cdax {
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
 
         this->authenticated = true;
+        this->cipher = Cipher::RSA;
         CryptoPP::StringSource(this->getPayloadData(), true, sf);
     }
 
