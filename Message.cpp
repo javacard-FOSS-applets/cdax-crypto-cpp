@@ -8,16 +8,6 @@ namespace cdax {
         this->timestamp = std::time(0);
     };
 
-    void Message::setCipher(Cipher::CipherType c)
-    {
-        this->cipher = c;
-    }
-
-    Cipher::CipherType Message::getCipher()
-    {
-        return this->cipher;
-    }
-
     void Message::setData(std::string d)
     {
         this->data = d;
@@ -53,74 +43,34 @@ namespace cdax {
         return this->signature;
     }
 
+    void Message::signEncrypt(CryptoPP::SecByteBlock key)
+    {
+        this->sign(key);
+        this->data = this->data + this->signature;
+        this->signature.clear();
+        this->encrypt(key);
+    }
+
+    void Message::verifyDecrypt(CryptoPP::SecByteBlock key)
+    {
+        this->decrypt(key);
+        this->signature = this->data.substr(this->data.size() - 32, 32);
+        this->data = this->data.substr(0, this->data.size() - 32);
+        this->verify(key);
+    }
+
     void Message::encrypt(CryptoPP::SecByteBlock key)
     {
-        // select algoritm
-        switch(this->cipher) {
-            case Cipher::Salsa20: {
-                generateIV(CryptoPP::Salsa20::IV_LENGTH);
-                CryptoPP::Salsa20::Encryption encrypt(key, key.size(), this->iv);
-                this->data = applyCipher(encrypt);
-                break;
-            }
-            case Cipher::AES_CBC: {
-                generateIV(CryptoPP::AES::BLOCKSIZE);
-                CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key, key.size(), this->iv);
-                this->data = applyCipher(encrypt);
-                break;
-            }
-            case Cipher::AES_GCM: {
-                std::string cipertext;
-                const int TAG_SIZE = 12;
-                generateIV(CryptoPP::AES::BLOCKSIZE * 16);
-                CryptoPP::GCM<CryptoPP::AES>::Encryption encrypt;
-                encrypt.SetKeyWithIV(key, key.size(), this->iv, this->iv.size());
-                CryptoPP::StringSink* sink = new CryptoPP::StringSink(cipertext);
-                CryptoPP::StreamTransformationFilter* enc = new CryptoPP::AuthenticatedEncryptionFilter(encrypt, sink, false, TAG_SIZE);
-                CryptoPP::StringSource(this->data, true, enc);
-                this->data = cipertext;
-                break;
-            }
-            case Cipher::RSA: {
-                std::cerr << "Wrong key type for RSA decryption." << std::endl;
-                break;
-            }
-        }
-        this->encrypted = true;
+        generateIV(CryptoPP::AES::BLOCKSIZE);
+        CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key, key.size(), this->iv);
+        this->data = applyCipher(encrypt);
     }
 
     void Message::decrypt(CryptoPP::SecByteBlock key)
     {
-        // select algoritm
-        switch(this->cipher) {
-            case Cipher::Salsa20: {
-                CryptoPP::Salsa20::Decryption decrypt(key, key.size(), this->iv);
-                this->data = applyCipher(decrypt);
-                break;
-            }
-            case Cipher::AES_CBC: {
-                CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key, key.size(), this->iv);
-                this->data = applyCipher(decrypt);
-                break;
-            }
-            case Cipher::AES_GCM: {
-                std::string plaintext;
-                const int TAG_SIZE = 12;
-                CryptoPP::GCM<CryptoPP::AES>::Decryption decrypt;
-                decrypt.SetKeyWithIV(key, key.size(), this->iv, this->iv.size());
-                CryptoPP::StringSink* sink = new CryptoPP::StringSink(plaintext);
-                const int flags = CryptoPP::AuthenticatedDecryptionFilter::DEFAULT_FLAGS;
-                CryptoPP::AuthenticatedDecryptionFilter df(decrypt, sink, flags, TAG_SIZE);
-                CryptoPP::StringSource(this->data, true, new CryptoPP::Redirector(df));
-                this->data = plaintext;
-                break;
-            }
-            case Cipher::RSA: {
-                std::cerr << "Wrong key type for RSA encryption." << std::endl;
-                break;
-            }
-        }
-        this->encrypted = false;
+        CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key, key.size(), this->iv);
+        this->data = applyCipher(decrypt);
+        this->iv.resize(0);
     }
 
     void Message::sign(CryptoPP::SecByteBlock key)
@@ -130,7 +80,6 @@ namespace cdax {
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(this->signature);
         CryptoPP::HashFilter *hf = new CryptoPP::HashFilter(hmac, ss);
 
-        this->authenticated = true;
         CryptoPP::StringSource(this->getPayloadData(), true, hf);
     }
 
@@ -153,8 +102,6 @@ namespace cdax {
         CryptoPP::StringSource(this->data, true, ef);
 
         this->data = ciphertext;
-        this->encrypted = true;
-        this->cipher = Cipher::RSA;
     }
 
     void Message::decrypt(CryptoPP::RSA::PrivateKey key)
@@ -168,7 +115,6 @@ namespace cdax {
         CryptoPP::StringSource(this->data, true, df);
 
         this->data = plaintext;
-        this->encrypted = false;
     }
 
     void Message::sign(CryptoPP::RSA::PrivateKey key)
@@ -180,8 +126,6 @@ namespace cdax {
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(this->signature);
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
 
-        this->authenticated = true;
-        this->cipher = Cipher::RSA;
         CryptoPP::StringSource(this->getPayloadData(), true, sf);
     }
 
@@ -214,9 +158,6 @@ namespace cdax {
         std::string tmp_iv = std::string(this->iv.begin(), this->iv.end());
         ss << tmp_iv;
 
-        std::string tmp_cipher = boost::lexical_cast<std::string>(this->cipher);
-        ss << tmp_cipher;
-
         return ss.str();
     }
 
@@ -231,17 +172,16 @@ namespace cdax {
 
     std::ostream &operator<< (std::ostream &out, const Message &msg)
     {
-        if (!msg.encrypted) {
-            out << "message: " << msg.data << std::endl << "topic: " << msg.topic;
-            out << " sender: " << msg.id << " date: " << std::ctime(&msg.timestamp);
+        if (msg.iv.size() > 0) {
+            out << "message ciper text: " << hex(msg.data) << " iv: " << hex(msg.iv);
         } else {
-            out << "message: " << hex(msg.data) << std::endl << "topic: " << msg.topic;
-            out << " sender: " << msg.id << " date: " << std::ctime(&msg.timestamp);
-            out << "encryption: " << Cipher::CipherString[msg.cipher];
-            out << " iv: " << hex(msg.iv) << std::endl;
+            out << "message plain text: " << msg.data;
         }
 
-        if (msg.authenticated) {
+        out << " topic: " << msg.topic << " source: " << msg.id;
+        out << " " << std::ctime(&msg.timestamp);
+
+        if (msg.signature.size() > 0) {
             out << "mac/signature: " << hex(msg.signature) << std::endl;
         }
 

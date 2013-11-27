@@ -20,13 +20,13 @@ int main(int argc, char* argv[])
 
     thrds.create_thread(std::bind(&SecurityServer::serve, &s));
 
-    Node n1 = s.addNode("node_1", "6001");
-    Node n2 = s.addNode("node_2", "6002");
-
     Publisher p1 = s.addPublisher("publisher_1");
     Publisher p2 = s.addPublisher("publisher_2");
     Subscriber s1 = s.addSubscriber("subscriber_1", "5001");
     Subscriber s2 = s.addSubscriber("subscriber_2", "5002");
+
+    Node n1 = s.addNode("node_1", "6001");
+    Node n2 = s.addNode("node_2", "6002");
 
     thrds.create_thread(std::bind(&Node::serve, &n1));
     thrds.create_thread(std::bind(&Node::serve, &n2));

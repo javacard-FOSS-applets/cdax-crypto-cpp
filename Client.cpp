@@ -41,11 +41,6 @@ namespace cdax {
         this->color = BLUE;
     }
 
-    void Publisher::setCipher(Cipher::CipherType c)
-    {
-        this->cipher = c;
-    }
-
     void Publisher::generateRandom()
     {
         for (;;)
@@ -64,11 +59,10 @@ namespace cdax {
             msg.setId(this->id);
             msg.setTopic(random_topic);
             msg.setData(randomString(8));
-            msg.setCipher(this->cipher);
 
             this->log("published:", msg);
 
-            msg.encrypt(this->topic_keys[random_topic].getEncKey());
+            msg.signEncrypt(this->topic_keys[random_topic].getEncKey());
             msg.sign(this->topic_keys[random_topic].getAuthKey());
 
             send(msg, this->topic_ports[random_topic]);
@@ -87,7 +81,7 @@ namespace cdax {
     Message Subscriber::handle(Message msg)
     {
         msg.verify(this->topic_keys[msg.getTopic()].getAuthKey());
-        msg.decrypt(this->topic_keys[msg.getTopic()].getEncKey());
+        msg.verifyDecrypt(this->topic_keys[msg.getTopic()].getEncKey());
 
         this->log("received:", msg);
 

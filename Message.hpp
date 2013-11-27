@@ -42,15 +42,6 @@ namespace cdax {
 
             std::string tmp_iv = std::string(this->iv.begin(), this->iv.end());
             ar << tmp_iv;
-
-            std::string tmp_cipher = boost::lexical_cast<std::string>(this->cipher);
-            ar << tmp_cipher;
-
-            std::string tmp_enc = boost::lexical_cast<std::string>(encrypted);
-            ar << tmp_enc;
-
-            std::string tmp_auth = boost::lexical_cast<std::string>(authenticated);
-            ar << tmp_auth;
         }
 
         template<class Archive>
@@ -69,19 +60,6 @@ namespace cdax {
             ar >> tmp_iv;
             this->iv = CryptoPP::SecByteBlock(tmp_iv.size());
             this->iv.Assign((const unsigned char*) tmp_iv.c_str(), tmp_iv.size());
-
-            std::string tmp_cipher;
-            ar >> tmp_cipher;
-            int c = boost::lexical_cast<int>(tmp_cipher);
-            this->cipher = static_cast<Cipher::CipherType>(c);
-
-            std::string tmp_enc;
-            ar >> tmp_enc;
-            this->encrypted = boost::lexical_cast<bool>(tmp_enc);
-
-            std::string tmp_auth;
-            ar >> tmp_auth;
-            this->authenticated = boost::lexical_cast<bool>(tmp_auth);
         }
 
         template<class Archive>
@@ -99,10 +77,6 @@ namespace cdax {
         std::time_t timestamp;
 
         CryptoPP::SecByteBlock iv;
-        Cipher::CipherType cipher = Cipher::AES_CBC;
-
-        bool encrypted = false;
-        bool authenticated = false;
 
         void generateIV(int length);
         std::string applyCipher(CryptoPP::StreamTransformation &t);
@@ -113,9 +87,6 @@ namespace cdax {
 
     public:
         Message();
-
-        void setCipher(Cipher::CipherType c);
-        Cipher::CipherType getCipher();
 
         void setId(std::string d);
         std::string getId();
@@ -128,6 +99,9 @@ namespace cdax {
 
         std::string getSignature();
 
+        void signEncrypt(CryptoPP::SecByteBlock key);
+        void verifyDecrypt(CryptoPP::SecByteBlock key);
+
         void encrypt(CryptoPP::SecByteBlock key);
         void decrypt(CryptoPP::SecByteBlock key);
 
@@ -139,7 +113,6 @@ namespace cdax {
 
         void sign(CryptoPP::RSA::PrivateKey key);
         void verify(CryptoPP::RSA::PublicKey key);
-
     };
 
 }

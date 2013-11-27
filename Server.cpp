@@ -25,7 +25,6 @@ namespace cdax {
         Message response = send(request, this->sec_server_port);
 
         response.decrypt(this->key_pair.getPrivate());
-
         response.verify(this->sec_server_key);
 
         TopicKeyPair *kp = new TopicKeyPair(response.getData());
@@ -53,7 +52,13 @@ namespace cdax {
     {
         if (msg.getData().compare("topic_join") == 0) {
 
-            this->addTopic(msg.getTopic());
+            // verify topic join request
+            msg.verify(this->clients[msg.getId()]);
+
+            // load topic keys if they are not present
+            if (this->topic_keys.count(msg.getTopic()) == 0) {
+                this->addTopic(msg.getTopic());
+            }
 
             this->log("forwarded topic join request of " + msg.getId());
 
@@ -68,13 +73,16 @@ namespace cdax {
             return Message();
         }
 
-        std::vector<std::string> subs = subscribers[msg.getTopic()];
+        // verify topic data HMAC
         msg.verify(this->topic_keys[msg.getTopic()]);
+
+        // load list of subscribers
+        std::vector<std::string> subs = subscribers[msg.getTopic()];
 
         this->log("forwarded to " + boost::lexical_cast<std::string>(subs.size()) + " subscribers");
 
+        // forward message
         for (std::vector<std::string>::size_type i = 0; i < subs.size(); ++i) {
-            // forward messages
             send(msg, this->sub_ports[subs[i]]);
         }
 

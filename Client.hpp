@@ -21,12 +21,8 @@ namespace cdax {
 
     class Publisher : public Client
     {
-    private:
-        Cipher::CipherType cipher;
-
     public:
         Publisher(std::string identity, RSAKeyPair kp);
-        void setCipher(Cipher::CipherType c);
         void generateRandom();
     };
 

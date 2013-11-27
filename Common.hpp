@@ -21,23 +21,6 @@
 
 namespace cdax {
 
-    namespace Cipher
-    {
-        enum CipherType {
-            Salsa20,
-            AES_CBC,
-            AES_GCM,
-            RSA
-        };
-
-        static const char* CipherString[] = {
-            "Salsa 20",
-            "AES CBC Mode",
-            "AES Authenticated GCM",
-            "RSA"
-        };
-    }
-
     class RSAKeyPair
     {
     public:

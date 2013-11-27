@@ -24,7 +24,7 @@ CryptoPP::SecByteBlock generateKey(size_t length)
     return key;
 }
 
-void testAES_CBC()
+void testEncrypt()
 {
     Message *msg = new Message();
     msg->setData("foo bar");
@@ -40,38 +40,6 @@ void testAES_CBC()
     std::cout << "decrypted plaintext: " << msg->getData() << std::endl << line << std::endl;
 }
 
-void testAES_GCM()
-{
-    Message *msg = new Message();
-    msg->setData("foo bar");
-
-    CryptoPP::SecByteBlock aes_key = generateKey(CryptoPP::AES::DEFAULT_KEYLENGTH);
-    std::cout << "AES GCM key: " << hex(aes_key) << std::endl;
-
-    msg->setCipher(Cipher::AES_GCM);
-    msg->encrypt(aes_key);
-    std::cout << "AES GCM ciphertext: " << hex(msg->getData()) << std::endl;
-
-    msg->decrypt(aes_key);
-    std::cout << "decrypted plaintext: " << msg->getData() << std::endl;
-    std::cout << "verification successfull" << std::endl << line << std::endl;
-}
-
-void testSalsa()
-{
-    Message *msg = new Message();
-    msg->setData("foo bar");
-
-    CryptoPP::SecByteBlock salsa_key = generateKey(CryptoPP::Salsa20::DEFAULT_KEYLENGTH);
-    std::cout << "Salsa key: " << hex(salsa_key) << std::endl;
-
-    msg->setCipher(Cipher::Salsa20);
-    msg->encrypt(salsa_key);
-    std::cout << "Salsa ciphertext: " << hex(msg->getData()) << std::endl;
-
-    msg->decrypt(salsa_key);
-    std::cout << "decrypted plaintext: " << msg->getData() << std::endl << line << std::endl;
-}
 
 void testHMAC()
 {
@@ -94,8 +62,8 @@ void testRSA()
     msg->setData("foo bar");
 
     RSAKeyPair keypair = generateKeyPair(512);
-    // std::cout << "RSA public key: " << hex(keypair.getPublic()) << std::endl;
-    // std::cout << "RSA private key: " << hex(keypair.getPrivate()) << std::endl;
+    std::cout << "RSA public key: " << hex(keypair.getPublic()) << std::endl;
+    std::cout << "RSA private key: " << hex(keypair.getPrivate()) << std::endl;
 
     msg->encrypt(keypair.getPublic());
     std::cout << "RSA ciphertext: " << hex(msg->getData()) << std::endl;
@@ -120,16 +88,32 @@ void testTopicKeyPair()
     std::cout << hex(kp2.getEncKey()) << " - " << hex(kp2.getAuthKey()) << std::endl;
 }
 
+void testSignCrypt()
+{
+    Message *msg = new Message();
+    msg->setData("foo bar");
+
+    CryptoPP::SecByteBlock key = generateKey(16);
+    std::cout << "AES and HMAC key: " << hex(key) << std::endl;
+
+    msg->signEncrypt(key);
+    std::cout << "HMAC: " << hex(msg->getSignature()) << std::endl;
+    std::cout << *msg << std::endl;
+
+    msg->verifyDecrypt(key);
+    std::cout << "decrypted plaintext: " << msg->getData() << std::endl << line << std::endl;
+    std::cout << "verification successfull" << *msg << std::endl << line << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     std::cout << "starting tests..." << std::endl << line << std::endl;
 
-    testAES_CBC();
-    testSalsa();
-    testAES_GCM();
+    testEncrypt();
     testHMAC();
     testRSA();
-    // testTopicKeyPair();
+    testTopicKeyPair();
+    testSignCrypt();
 
     return 0;
 }
