@@ -24,8 +24,8 @@ namespace cdax {
 
         Message response = send(request, this->sec_server_port);
 
-        response.decrypt(this->key_pair.getPrivate());
         response.verify(this->sec_server_key);
+        response.decrypt(this->key_pair.getPrivate());
 
         TopicKeyPair *kp = new TopicKeyPair(response.getData());
         this->topic_keys[topic_name] = kp->getAuthKey();
@@ -62,7 +62,12 @@ namespace cdax {
 
             this->log("forwarded topic join request of " + msg.getId());
 
-            return send(msg, this->sec_server_port);
+            Message response = send(msg, this->sec_server_port);
+
+            // verify response from the security server
+            response.verify(this->sec_server_key);
+
+            return response;
         }
 
         if (subscribers.count(msg.getTopic()) == 0) {
@@ -123,9 +128,8 @@ namespace cdax {
         response.setTopic(msg.getTopic());
         response.setData(topic_keys.toString());
 
-        response.sign(this->key_pair.getPrivate());
-
         response.encrypt(pub_key);
+        response.sign(this->key_pair.getPrivate());
 
         this->log("sent topic keys for topic " + msg.getTopic() + " to " + msg.getId());
 

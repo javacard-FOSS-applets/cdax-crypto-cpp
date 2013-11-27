@@ -19,8 +19,8 @@ namespace cdax {
 
         Message response = send(request, port_number);
 
-        response.decrypt(this->key_pair.getPrivate());
         response.verify(this->sec_server_key);
+        response.decrypt(this->key_pair.getPrivate());
 
         this->log("received topic keys for " + topic_name);
 
