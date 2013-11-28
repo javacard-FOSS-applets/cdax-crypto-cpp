@@ -3,6 +3,13 @@
 
 namespace cdax {
 
+    /**
+     * Construct a new subscriber, given its name,
+     * RSA key pair and the port number to listen on
+     * @param string identity name of the subscriber
+     * @param string port_number port number as string
+     * @param string rsa_key_pair
+     */
     Subscriber::Subscriber(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair)
     {
         this->id = identity;
@@ -13,6 +20,11 @@ namespace cdax {
         this->color = GREEN;
     }
 
+    /**
+     * Handle topic data messages, verify the two HMACs and decrypt topic data
+     * @param   Message msg topic data message
+     * @return  Message empty response
+     */
     Message Subscriber::handle(Message msg)
     {
         // verify with the node topic key

@@ -13,13 +13,25 @@
 
 namespace cdax {
 
+    /**
+     * The security server class is responsible for initiating clients
+     * and nodes and generating their RSA key pairs as wel as topic keys.
+     * The server listens for topic join request end sends topic keys to
+     * authenticated clients or nodes.
+     */
     class SecurityServer : public Host
     {
     private:
+        // list of topic names and their key pairs
         boost::unordered_map<std::string, TopicKeyPair> topics;
+
+        // list of node names and public keys
         boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> nodes;
+
+        // list of client names and public keys
         boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> clients;
 
+        // pseudo random number generator
         CryptoPP::AutoSeededRandomPool prng;
 
         CryptoPP::SecByteBlock generateKey(size_t length);

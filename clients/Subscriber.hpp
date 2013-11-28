@@ -5,6 +5,9 @@
 
 namespace cdax {
 
+    /**
+     * CDAX subscriber class, responsible for receiving and logging topic data
+     */
     class Subscriber : public Client
     {
     protected:

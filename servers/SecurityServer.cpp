@@ -3,6 +3,11 @@
 
 namespace cdax {
 
+    /**
+     * Construct a security server and generate a security server RSA key pair
+     * @param string identity
+     * @param string port_number
+     */
     SecurityServer::SecurityServer(std::string identity, std::string port_number)
     {
         this->id = identity;
@@ -13,6 +18,15 @@ namespace cdax {
         this->color = RED;
     }
 
+    /**
+     * Handle topic join request for clients and nodes
+     * The request is verified using the public key of the client or node,
+     * but there is no access control in place, for the sake of simplicity and abstraction
+     * Cleints receive the full topic key pair, nodes only receive the HMAC
+     * or authentication key
+     * @param  Message msg request
+     * @return Message response
+     */
     Message SecurityServer::handle(Message msg)
     {
         // security server only handles topic join requests
@@ -76,6 +90,11 @@ namespace cdax {
         return response;
     }
 
+    /**
+     * Generate a AES or HMAC key
+     * @param  int length key length
+     * @return CryptoPP::SecByteBlock the generated key
+     */
     CryptoPP::SecByteBlock SecurityServer::generateKey(size_t length)
     {
         // Pseudo Random Number Generator
@@ -84,6 +103,11 @@ namespace cdax {
         return key;
     }
 
+    /**
+     * Generate a new RSA key pair
+     * @param  int length key length
+     * @return RSAKeyPair
+     */
     RSAKeyPair SecurityServer::generateKeyPair(size_t length)
     {
         // Generate Parameters
@@ -95,6 +119,10 @@ namespace cdax {
         return keyPair;
     }
 
+    /**
+     * Add a new topic and generate the topic keys
+     * @param string topic_name name of the topic
+     */
     void SecurityServer::addTopic(std::string topic_name)
     {
         TopicKeyPair topic_key_pair(
@@ -104,6 +132,12 @@ namespace cdax {
         this->topics[topic_name] = topic_key_pair;
     }
 
+    /**
+     * Construct a new node, generate a keypairt and set the required attributes
+     * @param  string node_name name of the node
+     * @param  string port the port number of the node
+     * @return Node
+     */
     Node SecurityServer::addNode(std::string node_name, std::string port)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
@@ -115,6 +149,12 @@ namespace cdax {
         return node;
     }
 
+    /**
+     * Construct a new subscriber, generate a keypairt and set the required attributes
+     * @param  string node_name name of the subscriber
+     * @param  string port the port number of the subscriber
+     * @return Subscriber
+     */
     Subscriber SecurityServer::addSubscriber(std::string client_name, std::string port)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
@@ -125,6 +165,11 @@ namespace cdax {
         return sub;
     }
 
+    /**
+     * Construct a new publisher, generate a keypairt and set the required attributes
+     * @param  string node_name name of the publisher
+     * @return Publisher
+     */
     Publisher SecurityServer::addPublisher(std::string client_name)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);

@@ -8,8 +8,16 @@
 
 using namespace cdax;
 
+/**
+ * Setup a simulated CDAX system, in which hosts like clients or nodes
+ * are modelled by threads, each having a unique port number, to setup TCP connections
+ * @param  argc ignored
+ * @param  argv ignored
+ * @return int response code
+ */
 int main(int argc, char* argv[])
 {
+    // new thread pool
     boost::thread_group thrds;
 
     SecurityServer s("sec_server", "7000");
@@ -18,6 +26,9 @@ int main(int argc, char* argv[])
     s.addTopic("topic_2");
     s.addTopic("topic_3");
 
+    // create treads security server main loop
+    // this is needed to handle topic key request
+    // when adding new topics to nodes
     thrds.create_thread(std::bind(&SecurityServer::serve, &s));
 
     Publisher p1 = s.addPublisher("publisher_1");
@@ -28,6 +39,8 @@ int main(int argc, char* argv[])
     Node n1 = s.addNode("node_1", "6001");
     Node n2 = s.addNode("node_2", "6002");
 
+    // create treads from each host main loop
+    // this is needed to handle topic join requests from the clients
     thrds.create_thread(std::bind(&Node::serve, &n1));
     thrds.create_thread(std::bind(&Node::serve, &n2));
 
@@ -45,11 +58,13 @@ int main(int argc, char* argv[])
     s2.addTopic("topic_2", "6001");
     s2.addTopic("topic_3", "6002");
 
+    // create treads from each host main loop
     thrds.create_thread(std::bind(&Subscriber::serve, &s1));
     thrds.create_thread(std::bind(&Subscriber::serve, &s2));
     thrds.create_thread(std::bind(&Publisher::generateRandom, &p1));
     thrds.create_thread(std::bind(&Publisher::generateRandom, &p2));
 
+    // wait for all threads to terminate
     thrds.join_all();
 
     return 0;

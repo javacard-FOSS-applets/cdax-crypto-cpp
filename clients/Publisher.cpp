@@ -3,6 +3,11 @@
 
 namespace cdax {
 
+    /**
+     * Construct a new publisher, given a name and RSA key pair
+     * @param string identity
+     * @param RSAKeyPair rsa_key_pair
+     */
     Publisher::Publisher(std::string identity, RSAKeyPair rsa_key_pair)
     {
         this->id = identity;
@@ -12,8 +17,12 @@ namespace cdax {
         this->color = BLUE;
     }
 
+    /**
+     * Generate random topic data and send the message to the appropriate node
+     */
     void Publisher::generateRandom()
     {
+        // loop endlessly
         for (;;)
         {
             // wait random time before sending the next message

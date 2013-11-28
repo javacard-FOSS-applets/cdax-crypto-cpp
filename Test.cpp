@@ -5,8 +5,14 @@
 
 using namespace cdax;
 
+// ascii decoration line
 const std::string line = std::string(80, '#');
 
+/**
+ * Generate a RSa key pair
+ * @param  int length
+ * @return RSAKeyPair
+ */
 RSAKeyPair generateKeyPair(size_t length)
 {
     CryptoPP::AutoSeededRandomPool prng;
@@ -16,6 +22,11 @@ RSAKeyPair generateKeyPair(size_t length)
     return keyPair;
 }
 
+/**
+ * Generate AES or HMAC key
+ * @param  int length
+ * @return CryptoPP::SecByteBlock
+ */
 CryptoPP::SecByteBlock generateKey(size_t length)
 {
     CryptoPP::AutoSeededRandomPool prng;
@@ -24,6 +35,9 @@ CryptoPP::SecByteBlock generateKey(size_t length)
     return key;
 }
 
+/**
+ * Test message AES CBC encryption
+ */
 void testEncrypt()
 {
     Message *msg = new Message();
@@ -40,6 +54,9 @@ void testEncrypt()
     std::cout << "decrypted plaintext: " << msg->getData() << std::endl << line << std::endl;
 }
 
+/**
+ * Test message HMAC
+ */
 void testHMAC()
 {
     Message *msg = new Message();
@@ -55,6 +72,9 @@ void testHMAC()
     std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
+/**
+ * Test message RSA encryption and signing
+ */
 void testRSA()
 {
     Message *msg = new Message();
@@ -77,6 +97,9 @@ void testRSA()
     std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
+/**
+ * Test message encryption and signing in one method using the same key
+ */
 void testSignCrypt()
 {
     Message *msg = new Message();
@@ -94,6 +117,12 @@ void testSignCrypt()
     std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
+/**
+ * Eceute message unit tests
+ * @param  argc ignored
+ * @param  argv ignored
+ * @return int reponse code
+ */
 int main(int argc, char* argv[])
 {
     std::cout << "starting tests..." << std::endl << line << std::endl;

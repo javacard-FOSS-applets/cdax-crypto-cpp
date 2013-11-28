@@ -10,7 +10,7 @@ namespace cdax {
      * @param string port_number
      * @param string rsa_key_pair
      */
-    void Node::Node(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair)
+    Node::Node(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair)
     {
         this->id = identity;
         this->port = port_number;

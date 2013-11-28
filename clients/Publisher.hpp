@@ -4,6 +4,10 @@
 
 namespace cdax {
 
+    /**
+     * Publisher is responsible for collecting topic data and sending
+     * it to the appropiate node
+     */
     class Publisher : public Client
     {
     public:
