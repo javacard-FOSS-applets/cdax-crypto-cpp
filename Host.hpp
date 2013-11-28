@@ -16,15 +16,21 @@ namespace cdax {
 
     class Host
     {
-    protected:
-        RSAKeyPair key_pair;
-        CryptoPP::RSA::PublicKey sec_server_key;
-
-        std::string id;
-        const std::string ip = "127.0.0.1";
-        std::string port;
+    private:
         static boost::mutex io_mutex;
+
+    protected:
+        std::string id;
+        RSAKeyPair key_pair;
+
+        // terminal output color
         std::string color;
+
+        std::string ip = "127.0.0.1";
+        std::string port;
+
+        // security server public key
+        CryptoPP::RSA::PublicKey sec_server_key;
 
         virtual Message handle(Message request);
         Message send(Message request, std::string port);

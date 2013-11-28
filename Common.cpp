@@ -25,9 +25,11 @@ namespace cdax {
 
     TopicKeyPair::TopicKeyPair(std::string source)
     {
-        std::stringstream ss(source);
-        boost::archive::text_iarchive ia(ss);
-        ia >> *this;
+        int len = TopicKeyPair::KeyLength;
+        // first TopicKeyPair::KeyLength bytes are the encyption key
+        this->encryptionKey = stringToSec(source.substr(0, len));
+        // last TopicKeyPair::KeyLength bytes are the authentication key
+        this->authenticationKey = stringToSec(source.substr(len, len));
     }
 
     TopicKeyPair::TopicKeyPair(CryptoPP::SecByteBlock enc_key, CryptoPP::SecByteBlock auth_key)
@@ -38,10 +40,7 @@ namespace cdax {
 
     std::string TopicKeyPair::toString()
     {
-        std::stringstream ss;
-        boost::archive::text_oarchive oa(ss);
-        oa << *this;
-        return ss.str();
+        return secToString(this->encryptionKey) + secToString(this->authenticationKey);
     }
 
     CryptoPP::SecByteBlock TopicKeyPair::getEncKey()
@@ -52,6 +51,18 @@ namespace cdax {
     CryptoPP::SecByteBlock TopicKeyPair::getAuthKey()
     {
         return this->authenticationKey;
+    }
+
+    CryptoPP::SecByteBlock stringToSec(std::string str)
+    {
+        CryptoPP::SecByteBlock block(str.size());
+        block.Assign((const unsigned char*) str.c_str(), str.size());
+        return block;
+    }
+
+    std::string secToString(CryptoPP::SecByteBlock block)
+    {
+        return std::string(block.begin(), block.end());
     }
 
     std::string hex(std::string val)

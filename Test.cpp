@@ -40,7 +40,6 @@ void testEncrypt()
     std::cout << "decrypted plaintext: " << msg->getData() << std::endl << line << std::endl;
 }
 
-
 void testHMAC()
 {
     Message *msg = new Message();
@@ -49,7 +48,7 @@ void testHMAC()
     CryptoPP::SecByteBlock hmac_key = generateKey(16);
     std::cout << "HMAC key: " << hex(hmac_key) << std::endl;
 
-    msg->sign(hmac_key);
+    msg->hmac(hmac_key);
     std::cout << "HMAC: " << hex(msg->getSignature()) << std::endl;
 
     msg->verify(hmac_key);
@@ -78,16 +77,6 @@ void testRSA()
     std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
-void testTopicKeyPair()
-{
-    TopicKeyPair kp1 = TopicKeyPair(generateKey(16), generateKey(16));
-    std::cout << hex(kp1.getEncKey()) << " - " << hex(kp1.getAuthKey()) << std::endl;
-    std::string archive = kp1.toString();
-    std::cout << archive << std::endl;
-    TopicKeyPair kp2 = TopicKeyPair(archive);
-    std::cout << hex(kp2.getEncKey()) << " - " << hex(kp2.getAuthKey()) << std::endl;
-}
-
 void testSignCrypt()
 {
     Message *msg = new Message();
@@ -96,13 +85,13 @@ void testSignCrypt()
     CryptoPP::SecByteBlock key = generateKey(16);
     std::cout << "AES and HMAC key: " << hex(key) << std::endl;
 
-    msg->signEncrypt(key);
+    msg->hmacAndEncrypt(key);
     std::cout << "HMAC: " << hex(msg->getSignature()) << std::endl;
-    std::cout << *msg << std::endl;
+    std::cout << "message data: " << hex(msg->getData() ) << std::endl;
 
-    msg->verifyDecrypt(key);
+    msg->decryptAndVerify(key);
     std::cout << "decrypted plaintext: " << msg->getData() << std::endl << line << std::endl;
-    std::cout << "verification successfull" << *msg << std::endl << line << std::endl;
+    std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -112,7 +101,6 @@ int main(int argc, char* argv[])
     testEncrypt();
     testHMAC();
     testRSA();
-    testTopicKeyPair();
     testSignCrypt();
 
     return 0;

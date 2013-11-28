@@ -22,7 +22,7 @@ namespace cdax {
     class Publisher : public Client
     {
     public:
-        Publisher(std::string identity, RSAKeyPair kp);
+        Publisher(std::string identity, RSAKeyPair rsa_key_pair);
         void generateRandom();
     };
 
@@ -32,7 +32,7 @@ namespace cdax {
         Message handle(Message request);
 
     public:
-        Subscriber(std::string identity, std::string port_number, RSAKeyPair kp);
+        Subscriber(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair);
     };
 
 }

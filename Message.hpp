@@ -29,6 +29,23 @@ namespace cdax {
         friend std::ostream &operator<< (std::ostream &out, const Message &msg);
         friend class boost::serialization::access;
 
+        std::string id;
+        std::string topic;
+
+        std::string data;
+        std::string signature;
+
+        std::time_t timestamp;
+
+        CryptoPP::SecByteBlock iv;
+
+        void generateIV(int length);
+        std::string applyCipher(CryptoPP::StreamTransformation &t);
+        std::string getPayloadData();
+
+        CryptoPP::SecByteBlock getIV();
+        void setIV(CryptoPP::SecByteBlock sec_iv);
+
         template<class Archive>
         void save(Archive & ar, const unsigned int version) const
         {
@@ -68,51 +85,36 @@ namespace cdax {
             boost::serialization::split_member(ar, *this, file_version);
         }
 
-        std::string id;
-        std::string topic;
-
-        std::string data;
-        std::string signature;
-
-        std::time_t timestamp;
-
-        CryptoPP::SecByteBlock iv;
-
-        void generateIV(int length);
-        std::string applyCipher(CryptoPP::StreamTransformation &t);
-        std::string getPayloadData();
-
-        CryptoPP::SecByteBlock getIV();
-        void setIV(CryptoPP::SecByteBlock sec_iv);
-
     public:
         Message();
 
-        void setId(std::string d);
+        Message(std::string identity, std::string topic_name, std::string topic_data);
+
+        void setId(std::string identity);
         std::string getId();
 
-        void setTopic(std::string d);
+        void setTopic(std::string topic_name);
         std::string getTopic();
 
-        void setData(std::string d);
+        void setData(std::string topic_data);
         std::string getData();
 
         std::string getSignature();
 
-        void signEncrypt(CryptoPP::SecByteBlock key);
-        void verifyDecrypt(CryptoPP::SecByteBlock key);
+        void hmacAndEncrypt(CryptoPP::SecByteBlock key);
+        bool decryptAndVerify(CryptoPP::SecByteBlock key);
 
         void encrypt(CryptoPP::SecByteBlock key);
-        void decrypt(CryptoPP::SecByteBlock key);
+        bool decrypt(CryptoPP::SecByteBlock key);
 
-        void sign(CryptoPP::SecByteBlock key);
-        void verify(CryptoPP::SecByteBlock key);
+        void hmac(CryptoPP::SecByteBlock key);
+        bool verify(CryptoPP::SecByteBlock key);
 
         void encrypt(CryptoPP::RSA::PublicKey key);
-        void decrypt(CryptoPP::RSA::PrivateKey key);
+        bool decrypt(CryptoPP::RSA::PrivateKey key);
 
         void sign(CryptoPP::RSA::PrivateKey key);
-        void verify(CryptoPP::RSA::PublicKey key);
+        bool verify(CryptoPP::RSA::PublicKey key);
     };
 
 }

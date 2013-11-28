@@ -21,12 +21,12 @@ namespace cdax {
         Message handle(Message msg);
 
     public:
-        Node(std::string identity, std::string port_number, RSAKeyPair kp);
+        Node(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair);
         void addTopic(std::string topic_name);
         void addSubscriber(std::string topic_name, std::string sub_name, std::string sub_port);
 
-        void setClients(boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> clnts);
-        void setServer(std::string port, CryptoPP::RSA::PublicKey key);
+        void setClients(boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> client_keys);
+        void setServer(std::string port, CryptoPP::RSA::PublicKey server_public_key);
 
     };
 

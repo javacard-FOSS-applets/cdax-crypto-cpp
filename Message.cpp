@@ -6,21 +6,26 @@ namespace cdax {
     Message::Message()
     {
         this->timestamp = std::time(0);
-    };
-
-    void Message::setData(std::string d)
-    {
-        this->data = d;
     }
 
-    std::string Message::getData()
+    Message::Message(std::string identity, std::string topic_name, std::string topic_data)
     {
-        return this->data;
+        this->timestamp = std::time(0);
+
+        this->id = identity;
+        this->topic = topic_name;
+        this->data = topic_data;
     }
 
-    void Message::setTopic(std::string t)
+    void Message::setId(std::string identity)
     {
-        this->topic = t;
+        this->id = identity;
+    }
+
+
+    void Message::setTopic(std::string topic_name)
+    {
+        this->topic = topic_name;
     }
 
     std::string Message::getTopic()
@@ -28,14 +33,19 @@ namespace cdax {
         return this->topic;
     }
 
-    void Message::setId(std::string i)
-    {
-        this->id = i;
-    }
-
     std::string Message::getId()
     {
         return this->id;
+    }
+
+    void Message::setData(std::string topic_data)
+    {
+        this->data = topic_data;
+    }
+
+    std::string Message::getData()
+    {
+        return this->data;
     }
 
     std::string Message::getSignature()
@@ -43,20 +53,26 @@ namespace cdax {
         return this->signature;
     }
 
-    void Message::signEncrypt(CryptoPP::SecByteBlock key)
+    void Message::hmacAndEncrypt(CryptoPP::SecByteBlock key)
     {
-        this->sign(key);
+        this->hmac(key);
         this->data = this->data + this->signature;
         this->signature.clear();
         this->encrypt(key);
     }
 
-    void Message::verifyDecrypt(CryptoPP::SecByteBlock key)
+    bool Message::decryptAndVerify(CryptoPP::SecByteBlock key)
     {
-        this->decrypt(key);
+        bool result = this->decrypt(key);
+
+        if (!result) {
+            return false;
+        }
+
         this->signature = this->data.substr(this->data.size() - 32, 32);
         this->data = this->data.substr(0, this->data.size() - 32);
-        this->verify(key);
+
+        return this->verify(key);
     }
 
     void Message::encrypt(CryptoPP::SecByteBlock key)
@@ -66,14 +82,21 @@ namespace cdax {
         this->data = applyCipher(encrypt);
     }
 
-    void Message::decrypt(CryptoPP::SecByteBlock key)
+    bool Message::decrypt(CryptoPP::SecByteBlock key)
     {
-        CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key, key.size(), this->iv);
-        this->data = applyCipher(decrypt);
-        this->iv.resize(0);
+        try {
+            CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key, key.size(), this->iv);
+            this->data = applyCipher(decrypt);
+            this->iv.resize(0);
+
+            return true;
+        } catch(const CryptoPP::Exception& e) {
+
+            return false;
+        }
     }
 
-    void Message::sign(CryptoPP::SecByteBlock key)
+    void Message::hmac(CryptoPP::SecByteBlock key)
     {
         this->signature.clear();
         CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, key.size());
@@ -83,12 +106,19 @@ namespace cdax {
         CryptoPP::StringSource(this->getPayloadData(), true, hf);
     }
 
-    void Message::verify(CryptoPP::SecByteBlock key)
+    bool Message::verify(CryptoPP::SecByteBlock key)
     {
-        CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, key.size());
-        const int flags = CryptoPP::HashVerificationFilter::THROW_EXCEPTION;
-        CryptoPP::HashVerificationFilter *hvf = new CryptoPP::HashVerificationFilter(hmac, NULL, flags);
-        CryptoPP::StringSource(this->getPayloadData() + this->signature, true, hvf);
+        try {
+            CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, key.size());
+            const int flags = CryptoPP::HashVerificationFilter::THROW_EXCEPTION | CryptoPP::HashVerificationFilter::HASH_AT_END;
+            CryptoPP::HashVerificationFilter *hvf = new CryptoPP::HashVerificationFilter(hmac, NULL, flags);
+            CryptoPP::StringSource(this->getPayloadData() + this->signature, true, hvf);
+
+            return true;
+        } catch(const CryptoPP::Exception& e) {
+
+            return false;
+        }
     }
 
     void Message::encrypt(CryptoPP::RSA::PublicKey key)
@@ -104,17 +134,24 @@ namespace cdax {
         this->data = ciphertext;
     }
 
-    void Message::decrypt(CryptoPP::RSA::PrivateKey key)
+    bool Message::decrypt(CryptoPP::RSA::PrivateKey key)
     {
         std::string plaintext;
         CryptoPP::AutoSeededRandomPool prng;
 
-        CryptoPP::RSAES_OAEP_SHA_Decryptor decryptor(key);
-        CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
-        CryptoPP::PK_DecryptorFilter *df = new CryptoPP::PK_DecryptorFilter(prng, decryptor, ss);
-        CryptoPP::StringSource(this->data, true, df);
+        try {
+            CryptoPP::RSAES_OAEP_SHA_Decryptor decryptor(key);
+            CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
+            CryptoPP::PK_DecryptorFilter *df = new CryptoPP::PK_DecryptorFilter(prng, decryptor, ss);
+            CryptoPP::StringSource(this->data, true, df);
 
-        this->data = plaintext;
+            this->data = plaintext;
+
+            return true;
+        } catch(const CryptoPP::Exception& e) {
+
+            return false;
+        }
     }
 
     void Message::sign(CryptoPP::RSA::PrivateKey key)
@@ -129,12 +166,19 @@ namespace cdax {
         CryptoPP::StringSource(this->getPayloadData(), true, sf);
     }
 
-    void Message::verify(CryptoPP::RSA::PublicKey key)
+    bool Message::verify(CryptoPP::RSA::PublicKey key)
     {
-        CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(key);
-        const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
-        CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
-        CryptoPP::StringSource(this->getPayloadData() + this->signature, true, svf);
+        try {
+            CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(key);
+            const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
+            CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
+            CryptoPP::StringSource(this->getPayloadData() + this->signature, true, svf);
+
+            return true;
+        } catch(const CryptoPP::Exception& e) {
+
+            return false;
+        }
     }
 
     void Message::generateIV(int length)
