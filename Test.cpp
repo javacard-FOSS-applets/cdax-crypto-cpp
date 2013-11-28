@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-#include "Message.hpp"
+#include "shared/Message.hpp"
 
 using namespace cdax;
 

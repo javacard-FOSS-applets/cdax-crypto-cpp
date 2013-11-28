@@ -6,16 +6,28 @@ namespace cdax {
     // stdout mutex, to prevent log messages from overlapping
     boost::mutex Host::io_mutex;
 
+    /**
+     * Get the host identity as string
+     * @return string identity
+     */
     std::string Host::getId()
     {
         return this->id;
     }
 
+    /**
+     * Get the host network port
+     * @return string the port number as string
+     */
     std::string Host::getPort()
     {
         return this->port;
     }
 
+    /**
+     * Main loop that listens for incoming TCP connections
+     * All TCP messages are passed to the Host::handle function
+     */
     void Host::serve()
     {
         this->log("listening on port " + this->port);
@@ -44,12 +56,23 @@ namespace cdax {
         }
     }
 
+    /**
+     * Handle a message and return a message response
+     * @param  Message request the request message
+     * @return Message the response message
+     */
     Message Host::handle(Message request)
     {
         // function stub, acts as echo server
         return request;
     }
 
+    /**
+     * Create a new TCP connection, send and subsequently receive a message
+     * @param  Message request the request message
+     * @param  string port the port number to send te message to
+     * @return Message the response message
+     */
     Message Host::send(Message request, std::string port)
     {
         // open new tcp connection
@@ -67,6 +90,9 @@ namespace cdax {
         return response;
     }
 
+    /**
+     * Sleep a random amount of time
+     */
     void Host::sleep()
     {
         // random value between 2 and 4 seconds
@@ -74,17 +100,32 @@ namespace cdax {
         boost::this_thread::sleep(boost::posix_time::milliseconds(random));
     }
 
+    /**
+     * Sleep for `seconds` seconds
+     * @param int seconds
+     */
     void Host::sleep(int seconds)
     {
         boost::this_thread::sleep(boost::posix_time::seconds(seconds));
     }
 
+    /**
+     * Log text to the console
+     * The defined host color is used
+     * @param string text
+     */
     void Host::log(std::string text)
     {
         boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
         std::cout << this->color << this->id << " " << text << std::endl;
     }
 
+    /**
+     * Log text and a message to the console
+     * The defined host color is used
+     * @param string text
+     * @param Message message
+     */
     void Host::log(std::string text, Message msg)
     {
         boost::unique_lock<boost::mutex> scoped_lock(io_mutex);

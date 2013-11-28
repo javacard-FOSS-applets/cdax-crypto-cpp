@@ -21,8 +21,20 @@ include_directories( SYSTEM ${Boost_INCLUDE_DIR} ${CRYPTOPP_INCLUDE_DIRS}  )
 # Update libs
 set( LIBS ${LIBS} ${Boost_LIBRARIES} ${CRYPTOPP_LIBRARIES} )
 
-add_executable( simulator Main Client Server host Message Common)
+add_executable( simulator Main
+    clients/Subscriber
+    clients/Publisher
+    clients/Client
+    servers/SecurityServer
+    servers/Node
+    shared/Host
+    shared/Message
+    shared/Common
+)
 target_link_libraries( simulator ${LIBS} )
 
-add_executable( test Test Message Common)
+add_executable( test Test
+    shared/Message
+    shared/Common
+)
 target_link_libraries( test ${LIBS} )

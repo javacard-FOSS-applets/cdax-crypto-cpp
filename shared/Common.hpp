@@ -21,10 +21,12 @@
 
 namespace cdax {
 
+    /**
+     * Container class of a RSA keypair, holds the default keylength
+     */
     class RSAKeyPair
     {
     private:
-
         CryptoPP::RSA::PublicKey publicKey;
         CryptoPP::RSA::PrivateKey privateKey;
 
@@ -39,6 +41,13 @@ namespace cdax {
 
     };
 
+    /**
+     * ciontainer class of a Topic keypair.
+     * The encrytpion key is used for AES CBC encryption and
+     * HMAC generation and is distributed to CDAX clients.
+     * The authentication key us used for message HMAC generation
+     * and is distributed to CDAX clients and nodes.
+     */
     class TopicKeyPair
     {
     private:

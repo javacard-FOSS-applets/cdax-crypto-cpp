@@ -1,10 +1,10 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "Message.hpp"
-#include "Host.hpp"
-#include "Client.hpp"
-#include "Server.hpp"
+#include "servers/SecurityServer.hpp"
+#include "servers/Node.hpp"
+#include "clients/Publisher.hpp"
+#include "clients/Subscriber.hpp"
 
 using namespace cdax;
 

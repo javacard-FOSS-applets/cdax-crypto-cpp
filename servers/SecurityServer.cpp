@@ -1,102 +1,7 @@
 
-#include "Server.hpp"
+#include "SecurityServer.hpp"
 
 namespace cdax {
-
-    Node::Node(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair)
-    {
-        this->id = identity;
-        this->port = port_number;
-        this->key_pair = rsa_key_pair;
-
-        // terminal log color
-        this->color = MAGENTA;
-    }
-
-    void Node::addTopic(std::string topic_name)
-    {
-        // create topic join request Message
-        Message request(this->id, topic_name, "topic_join");
-
-        // sign request with private key
-        request.sign(this->key_pair.getPrivate());
-
-        this->log("sent topic join request for " + topic_name);
-
-        Message response = send(request, this->sec_server_port);
-
-        // verify topic key message
-        response.verify(this->sec_server_key);
-
-        // decrypt Message with private key
-        response.decrypt(this->key_pair.getPrivate());
-
-        // store topic key
-        this->topic_keys[topic_name] = stringToSec(response.getData());
-    }
-
-    void Node::setClients(boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> client_keys)
-    {
-        this->clients = client_keys;
-    }
-
-    void Node::setServer(std::string port, CryptoPP::RSA::PublicKey server_public_key)
-    {
-        this->sec_server_port = port;
-        this->sec_server_key = server_public_key;
-    }
-
-    void Node::addSubscriber(std::string topic_name, std::string sub_name, std::string sub_port)
-    {
-        this->subscribers[topic_name].push_back(sub_name);
-        this->sub_ports[sub_name] = sub_port;
-    }
-
-    Message Node::handle(Message msg)
-    {
-        if (msg.getData().compare("topic_join") == 0) {
-
-            // verify topic join request
-            msg.verify(this->clients[msg.getId()]);
-
-            // load topic keys if they are not present
-            if (this->topic_keys.count(msg.getTopic()) == 0) {
-                this->addTopic(msg.getTopic());
-            }
-
-            this->log("forwarded topic join request of " + msg.getId());
-
-            Message response = send(msg, this->sec_server_port);
-
-            // verify response from the security server
-            response.verify(this->sec_server_key);
-
-            return response;
-        }
-
-        if (subscribers.count(msg.getTopic()) == 0) {
-            return Message();
-        }
-
-        if (topic_keys.count(msg.getTopic()) == 0) {
-            return Message();
-        }
-
-        // verify topic data HMAC
-        msg.verify(this->topic_keys[msg.getTopic()]);
-
-        // load list of subscribers
-        std::vector<std::string> subs = subscribers[msg.getTopic()];
-
-        this->log("forwarded to " + boost::lexical_cast<std::string>(subs.size()) + " subscribers");
-
-        // forward message
-        for (std::vector<std::string>::size_type i = 0; i < subs.size(); ++i) {
-            send(msg, this->sub_ports[subs[i]]);
-        }
-
-        return Message();
-    }
 
     SecurityServer::SecurityServer(std::string identity, std::string port_number)
     {
@@ -112,6 +17,9 @@ namespace cdax {
     {
         // security server only handles topic join requests
         if (msg.getData().compare("topic_join") != 0) {
+
+            this->log("received unknown request:", msg);
+
             return Message();
         }
 
@@ -133,8 +41,13 @@ namespace cdax {
             return Message();
         }
 
-        // vereify topic request
-        msg.verify(pub_key);
+        // verify topic request
+        if (!msg.verify(pub_key)) {
+
+            this->log("could not verify:", msg);
+
+            return Message();
+        }
 
         // now permissions of the node or lient should be checked
 

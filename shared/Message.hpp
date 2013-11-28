@@ -16,27 +16,43 @@
 #include <cryptopp/filters.h>
 
 #include <boost/lexical_cast.hpp>
+
+// a portable text archive model
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+
+// non-portable native binary archive
+// #include <boost/archive/binary_oarchive.hpp>
+// #include <boost/archive/binary_iarchive.hpp>
 
 #include "Common.hpp"
 
 namespace cdax {
 
+    /**
+     * Message class, container of a single unit of topic data and possible
+     * security attributes. This class is responsible for all cryptographic
+     * functionalities that are applied to its attribute contents.
+     */
     class Message
     {
     private:
-        friend std::ostream &operator<< (std::ostream &out, const Message &msg);
-        friend class boost::serialization::access;
-
+        // sender identity
         std::string id;
+
+        // topic name
         std::string topic;
 
+        // topic data or message payload
         std::string data;
+
+        // RSA signature or HMAC
         std::string signature;
 
+        // time of message creation
         std::time_t timestamp;
 
+        // AES encryption initialisation vector
         CryptoPP::SecByteBlock iv;
 
         void generateIV(int length);
@@ -46,6 +62,12 @@ namespace cdax {
         CryptoPP::SecByteBlock getIV();
         void setIV(CryptoPP::SecByteBlock sec_iv);
 
+        friend std::ostream &operator<< (std::ostream &out, const Message &msg);
+        friend class boost::serialization::access;
+
+        /**
+         * Encode message content to boost archive model
+         */
         template<class Archive>
         void save(Archive & ar, const unsigned int version) const
         {
@@ -57,10 +79,13 @@ namespace cdax {
             std::string tmp_timestamp = boost::lexical_cast<std::string>(this->timestamp);
             ar << tmp_timestamp;
 
-            std::string tmp_iv = std::string(this->iv.begin(), this->iv.end());
+            std::string tmp_iv = secToString(this->iv);
             ar << tmp_iv;
         }
 
+        /**
+         * Decode message contents from boost archive model
+         */
         template<class Archive>
         void load(Archive & ar, const unsigned int version)
         {
@@ -75,8 +100,7 @@ namespace cdax {
 
             std::string tmp_iv;
             ar >> tmp_iv;
-            this->iv = CryptoPP::SecByteBlock(tmp_iv.size());
-            this->iv.Assign((const unsigned char*) tmp_iv.c_str(), tmp_iv.size());
+            this->iv = stringToSec(tmp_iv);
         }
 
         template<class Archive>

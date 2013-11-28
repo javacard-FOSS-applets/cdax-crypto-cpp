@@ -2,8 +2,7 @@
 
 #include <boost/unordered_map.hpp>
 
-#include "Message.hpp"
-#include "Host.hpp"
+#include "../shared/Host.hpp"
 
 namespace cdax {
 
@@ -17,22 +16,6 @@ namespace cdax {
     public:
         void addTopic(std::string topic_name, std::string topic_port);
         void setServer(CryptoPP::RSA::PublicKey key);
-    };
-
-    class Publisher : public Client
-    {
-    public:
-        Publisher(std::string identity, RSAKeyPair rsa_key_pair);
-        void generateRandom();
-    };
-
-    class Subscriber : public Client
-    {
-    protected:
-        Message handle(Message request);
-
-    public:
-        Subscriber(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair);
     };
 
 }

@@ -7,11 +7,17 @@ C++ dependencies:
 
 * Boost (for threading, tcp connections and serialization, see http://www.boost.org/)
 * Crypto++ (for cryptographic functions, see http://www.cryptopp.com/)
-  
-To install the dependencies on OSX install MacPorts (http://www.macports.org/) and run:
+
+To install the dependencies on OSX install [MacPorts](http://www.macports.org/) and run:
 
 ```bash
 sudo port install boost libcryptopp
+```
+
+You can also use [Homebrew](http://brew.sh/):
+
+```bash
+brew install boost cryptopp
 ```
 
 On Debian Linux (or Ubuntu) install Boost and Crypto++ with aptitude:
