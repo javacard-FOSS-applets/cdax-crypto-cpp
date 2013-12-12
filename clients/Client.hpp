@@ -3,6 +3,7 @@
 #include <boost/unordered_map.hpp>
 
 #include "../shared/Host.hpp"
+#include "../card/SmartCard.hpp"
 
 namespace cdax {
 
@@ -21,6 +22,9 @@ namespace cdax {
 
         // list of node ports per topic name
         boost::unordered_map<std::string, std::string> topic_ports;
+
+        // smart card
+        SmartCard *card = NULL;
 
     public:
         void addTopic(std::string topic_name, std::string topic_port);

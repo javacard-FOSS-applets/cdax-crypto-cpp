@@ -14,17 +14,19 @@ add_definitions(
 # boost and cryptopp
 
 find_package( Boost COMPONENTS system thread serialization REQUIRED )
+find_package( PCSCLite REQUIRED )
 find_package( CryptoPP REQUIRED )
 
-include_directories( SYSTEM ${Boost_INCLUDE_DIR} ${CRYPTOPP_INCLUDE_DIRS}  )
+include_directories( SYSTEM ${Boost_INCLUDE_DIR} ${PCSCLITE_INCLUDE_DIR} ${CRYPTOPP_INCLUDE_DIRS} )
 
 # Update libs
-set( LIBS ${LIBS} ${Boost_LIBRARIES} ${CRYPTOPP_LIBRARIES} )
+set( LIBS ${LIBS} ${Boost_LIBRARIES} ${PCSCLITE_LIBRARY} ${CRYPTOPP_LIBRARIES} )
 
 add_executable( simulator Main
     clients/Subscriber
     clients/Publisher
     clients/Client
+    card/SmartCard
     servers/SecurityServer
     servers/Node
     shared/Host
@@ -33,8 +35,8 @@ add_executable( simulator Main
 )
 target_link_libraries( simulator ${LIBS} )
 
-add_executable( test Test
-    shared/Message
-    shared/Common
-)
-target_link_libraries( test ${LIBS} )
+# add_executable( test Test
+#     shared/Message
+#     shared/Common
+# )
+# target_link_libraries( test ${LIBS} )

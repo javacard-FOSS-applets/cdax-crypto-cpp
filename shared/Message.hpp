@@ -25,6 +25,7 @@
 // #include <boost/archive/binary_oarchive.hpp>
 // #include <boost/archive/binary_iarchive.hpp>
 
+#include "../card/SmartCard.hpp"
 #include "Common.hpp"
 
 namespace cdax {
@@ -125,8 +126,8 @@ namespace cdax {
 
         std::string getSignature();
 
-        void hmacAndEncrypt(CryptoPP::SecByteBlock key);
-        bool decryptAndVerify(CryptoPP::SecByteBlock key);
+        void encryptAndHMAC(CryptoPP::SecByteBlock key);
+        bool verifyAndDecrypt(CryptoPP::SecByteBlock key);
 
         void encrypt(CryptoPP::SecByteBlock key);
         bool decrypt(CryptoPP::SecByteBlock key);
@@ -139,6 +140,8 @@ namespace cdax {
 
         void sign(CryptoPP::RSA::PrivateKey key);
         bool verify(CryptoPP::RSA::PublicKey key);
+
+        void signOnCard(SmartCard *card);
     };
 
 }

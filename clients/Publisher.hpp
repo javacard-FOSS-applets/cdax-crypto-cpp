@@ -12,6 +12,8 @@ namespace cdax {
     {
     public:
         Publisher(std::string identity, RSAKeyPair rsa_key_pair);
+
+        void publishMessage(std::string topic, std::string data);
         void generateRandom();
     };
 

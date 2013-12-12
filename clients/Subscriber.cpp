@@ -36,7 +36,7 @@ namespace cdax {
         }
 
         // AES decrypt and verify hmac with end-to-end topic key
-        if (!msg.decryptAndVerify(this->topic_keys[msg.getTopic()].getEncKey())) {
+        if (!msg.verifyAndDecrypt(this->topic_keys[msg.getTopic()].getEncKey())) {
 
             this->log("could not decrypt and verify:", msg);
 

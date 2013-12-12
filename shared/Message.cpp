@@ -94,12 +94,12 @@ namespace cdax {
      * The HMAC is appended to the message topic data before encrypting
      * @param CryptoPP::SecByteBlock key
      */
-    void Message::hmacAndEncrypt(CryptoPP::SecByteBlock key)
+    void Message::encryptAndHMAC(CryptoPP::SecByteBlock key)
     {
+        this->encrypt(key);
         this->hmac(key);
         this->data = this->data + this->signature;
         this->signature.clear();
-        this->encrypt(key);
     }
 
     /**
@@ -107,18 +107,16 @@ namespace cdax {
      * @param  CryptoPP::SecByteBlock key AES and HMAC key
      * @return bool true if decryption and verification are successful
      */
-    bool Message::decryptAndVerify(CryptoPP::SecByteBlock key)
+    bool Message::verifyAndDecrypt(CryptoPP::SecByteBlock key)
     {
-        bool result = this->decrypt(key);
-
-        if (!result) {
-            return false;
-        }
-
         this->signature = this->data.substr(this->data.size() - 32, 32);
         this->data = this->data.substr(0, this->data.size() - 32);
 
-        return this->verify(key);
+        if (!this->verify(key)) {
+            return false;
+        }
+
+        return this->decrypt(key);
     }
 
     /**
@@ -244,6 +242,21 @@ namespace cdax {
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
 
         CryptoPP::StringSource(this->getPayloadData(), true, sf);
+    }
+
+    void Message::signOnCard(SmartCard *card)
+    {
+        std::string payload = this->getPayloadData();
+        size_t buffer_len = payload.length();
+        byte* buffer = new byte[buffer_len];
+        memcpy(buffer, payload.data(), buffer_len);
+
+        card->signMessage(buffer, buffer_len);
+
+
+        std::cout << "app level: " << hex(buffer, buffer_len) << std::endl;
+
+        // this->signature = std::string((char*) buffer, buffer_len);
     }
 
     /**

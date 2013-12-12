@@ -19,6 +19,15 @@ namespace cdax {
         // sign with private key
         request.sign(this->key_pair.getPrivate());
 
+        if (this->card != NULL) {
+
+            this->log("signed on device:", request);
+
+            request.signOnCard(this->card);
+
+            this->log("signed on card:", request);
+        }
+
         this->log("sent topic join request for " + topic_name);
 
         Message response = send(request, port_number);
@@ -35,6 +44,13 @@ namespace cdax {
         if (!response.decrypt(this->key_pair.getPrivate())) {
 
             this->log("could not decrypt:", response);
+
+            return;
+        }
+
+        if (response.getData().size() == 0) {
+
+            this->log("received an empty topic join response for " + topic_name);
 
             return;
         }

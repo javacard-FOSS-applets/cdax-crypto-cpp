@@ -15,6 +15,42 @@ namespace cdax {
 
         // terminal log color
         this->color = BLUE;
+
+        // connect to private smart card
+        this->card = new SmartCard();
+
+        this->log("is connecting to smart card...");
+
+        if (!card->selectReader()) {
+            this->log(card->getError());
+            return;
+        }
+
+        if (!card->waitForCard()) {
+            this->log(card->getError());
+            return;
+        }
+
+        if (!card->storePrivateKey(this->key_pair.getPrivate())) {
+            this->log(card->getError());
+            return;
+        }
+    }
+
+    void Publisher::publishMessage(std::string topic, std::string data)
+    {
+        // create random topic data message
+        Message msg(this->id, topic, data);
+
+        this->log("published:", msg);
+
+        // hmac and AES encrypt with end-to-end topic key
+        msg.encryptAndHMAC(this->topic_keys[topic].getEncKey());
+
+        // hmac with node topic key
+        msg.hmac(this->topic_keys[topic].getAuthKey());
+
+        send(msg, this->topic_ports[topic]);
     }
 
     /**
@@ -34,19 +70,9 @@ namespace cdax {
             }
 
             std::string random_topic = this->topics[rand() % this->topics.size()];
+            std::string random_data = randomString(8);
 
-            // create random topic data message
-            Message msg(this->id, random_topic, randomString(8));
-
-            this->log("published:", msg);
-
-            // hmac and AES encrypt with end-to-end topic key
-            msg.hmacAndEncrypt(this->topic_keys[random_topic].getEncKey());
-
-            // hmac with node topic key
-            msg.hmac(this->topic_keys[random_topic].getAuthKey());
-
-            send(msg, this->topic_ports[random_topic]);
+            this->publishMessage(random_topic, random_data);
         }
     }
 

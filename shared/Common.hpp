@@ -70,6 +70,7 @@ namespace cdax {
     CryptoPP::SecByteBlock stringToSec(std::string str);
     std::string secToString(CryptoPP::SecByteBlock block);
 
+    std::string hex(byte val[], size_t len);
     std::string hex(std::string val);
     std::string hex(CryptoPP::SecByteBlock val);
     std::string hex(CryptoPP::RSA::PrivateKey key);

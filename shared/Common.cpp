@@ -125,18 +125,40 @@ namespace cdax {
     }
 
     /**
+     * Format byte array as HEX string
+     * @param byte[]] val input value
+     * @param size_t val input value
+     * @return string HEX formatted string
+     */
+     std::string hex(byte val[], size_t len)
+     {
+         std::ostringstream ss;
+         ss << '(' << len  << " byte) " << std::hex;
+         for (std::size_t i = 0; i < len; ++i) {
+             if (i != 0) {
+                 ss << ':';
+             }
+             ss << std::setfill('0') << std::setw(2) << (int) (val[i] & 0xFF);
+         }
+         return ss.str();
+     }
+
+    /**
      * Format string as HEX string
      * @param  string val input value
      * @return string the HEX formatted string
      */
     std::string hex(std::string val)
     {
-        std::ostringstream ret;
-        ret << '(' << val.length() * 8 << " bit) " << std::hex;
+        std::ostringstream ss;
+        ss << '(' << val.length() << " byte) " << std::hex;
         for (std::string::size_type i = 0; i < val.length(); ++i) {
-            ret << std::setfill('0') << std::setw(2) << (int) (val[i] & 0xFF);
+            if (i != 0) {
+                ss << ':';
+            }
+            ss << std::setfill('0') << std::setw(2) << (int) (val[i] & 0xFF);
         }
-        return ret.str();
+        return ss.str();
     }
 
     /**
@@ -147,8 +169,11 @@ namespace cdax {
     std::string hex(CryptoPP::SecByteBlock val)
     {
         std::ostringstream ss;
-        ss << '(' << val.size() * 8 << " bit) " << std::hex;
+        ss << '(' << val.size() << " byte) " << std::hex;
         for(std::size_t i = 0; i < val.size(); ++i) {
+            if (i != 0) {
+                ss << ':';
+            }
             ss << (int) val[i];
         }
         return ss.str();
