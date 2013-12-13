@@ -22,18 +22,26 @@ include_directories( SYSTEM ${Boost_INCLUDE_DIR} ${PCSCLITE_INCLUDE_DIR} ${CRYPT
 # Update libs
 set( LIBS ${LIBS} ${Boost_LIBRARIES} ${PCSCLITE_LIBRARY} ${CRYPTOPP_LIBRARIES} )
 
-add_executable( simulator Main
-    clients/Subscriber
-    clients/Publisher
-    clients/Client
+
+add_executable( test CardTest
     card/SmartCard
-    servers/SecurityServer
-    servers/Node
-    shared/Host
     shared/Message
     shared/Common
 )
-target_link_libraries( simulator ${LIBS} )
+target_link_libraries( test ${LIBS} )
+
+# add_executable( simulator Main
+#     clients/Subscriber
+#     clients/Publisher
+#     clients/Client
+#     card/SmartCard
+#     servers/SecurityServer
+#     servers/Node
+#     shared/Host
+#     shared/Message
+#     shared/Common
+# )
+# target_link_libraries( simulator ${LIBS} )
 
 # add_executable( test Test
 #     shared/Message
