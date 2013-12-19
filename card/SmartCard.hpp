@@ -24,15 +24,18 @@ namespace cdax {
         std::string last_error;
         char* reader;
 
-    public:
-        std::string getError();
         bool selectReader();
         bool waitForCard();
         bool selectApplet();
-        bool transmit(bytestring &updu);
-        bool signMessage(bytestring &msg);
-        bool storePrivateKey(CryptoPP::InvertibleRSAFunction params);
 
+        bool transmit(bytestring &updu);
+    public:
+        std::string getError();
+
+        bool storePrivateKey(CryptoPP::RSA::PrivateKey* privKey);
+        CryptoPP::RSA::PublicKey* initialize(CryptoPP::RSA::PublicKey* secServerPub);
+
+        bool signMessage(bytestring &msg);
     };
 
 };

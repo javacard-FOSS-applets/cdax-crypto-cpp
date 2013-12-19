@@ -123,22 +123,22 @@ namespace cdax {
 
         bytestring getSignature();
 
-        void encryptAndHMAC(bytestring key);
-        bool verifyAndDecrypt(bytestring key);
+        void encryptAndHMAC(bytestring* key);
+        bool verifyAndDecrypt(bytestring* key);
 
-        void encrypt(bytestring key);
-        bool decrypt(bytestring key);
+        void encrypt(bytestring* key);
+        bool decrypt(bytestring* key);
 
-        void hmac(bytestring key);
-        bool verify(bytestring key);
+        void hmac(bytestring* key);
+        bool verify(bytestring* key);
 
-        void encrypt(CryptoPP::RSA::PublicKey key);
-        bool decrypt(CryptoPP::RSA::PrivateKey key);
+        void encrypt(CryptoPP::RSA::PublicKey* key);
+        bool decrypt(CryptoPP::RSA::PrivateKey* key);
 
-        void sign(CryptoPP::RSA::PrivateKey key);
-        bool verify(CryptoPP::RSA::PublicKey key);
+        void sign(CryptoPP::RSA::PrivateKey* key);
+        bool verify(CryptoPP::RSA::PublicKey* key);
 
-        void signOnCard(SmartCard *card);
+        void signOnCard(SmartCard* card);
     };
 
 }

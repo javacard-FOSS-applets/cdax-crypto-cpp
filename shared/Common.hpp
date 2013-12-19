@@ -21,52 +21,6 @@
 
 namespace cdax {
 
-    /**
-     * Container class of a RSA keypair, holds the default keylength
-     */
-    class RSAKeyPair
-    {
-    private:
-        CryptoPP::RSA::PublicKey publicKey;
-        CryptoPP::RSA::PrivateKey privateKey;
-
-    public:
-        static const int KeyLength = 1024;
-
-        RSAKeyPair();
-        RSAKeyPair(CryptoPP::InvertibleRSAFunction params);
-
-        CryptoPP::RSA::PublicKey getPublic();
-        CryptoPP::RSA::PrivateKey getPrivate();
-
-    };
-
-    /**
-     * ciontainer class of a Topic keypair.
-     * The encrytpion key is used for AES CBC encryption and
-     * HMAC generation and is distributed to CDAX clients.
-     * The authentication key us used for message HMAC generation
-     * and is distributed to CDAX clients and nodes.
-     */
-    class TopicKeyPair
-    {
-    private:
-        CryptoPP::SecByteBlock encryptionKey;
-        CryptoPP::SecByteBlock authenticationKey;
-
-    public:
-        static const int KeyLength = 16;
-
-        TopicKeyPair();
-        TopicKeyPair(std::string source);
-        TopicKeyPair(CryptoPP::SecByteBlock enc_key, CryptoPP::SecByteBlock auth_key);
-
-        CryptoPP::SecByteBlock getEncKey();
-        CryptoPP::SecByteBlock getAuthKey();
-
-        std::string toString();
-    };
-
     class bytestring : public CryptoPP::SecByteBlock
     {
     private:
@@ -84,12 +38,59 @@ namespace cdax {
         void clear();
     };
 
-    CryptoPP::SecByteBlock stringToSec(std::string str);
-    std::string secToString(CryptoPP::SecByteBlock block);
+
+    /**
+     * Container class of a RSA keypair, holds the default keylength
+     */
+    class RSAKeyPair
+    {
+    private:
+        CryptoPP::RSA::PublicKey publicKey;
+        CryptoPP::RSA::PrivateKey privateKey;
+
+    public:
+        static const int KeyLength = 1024;
+
+        RSAKeyPair();
+        RSAKeyPair(CryptoPP::InvertibleRSAFunction params);
+
+        CryptoPP::RSA::PublicKey* getPublic();
+        CryptoPP::RSA::PrivateKey* getPrivate();
+
+    };
+
+    /**
+     * ciontainer class of a Topic keypair.
+     * The encrytpion key is used for AES CBC encryption and
+     * HMAC generation and is distributed to CDAX clients.
+     * The authentication key us used for message HMAC generation
+     * and is distributed to CDAX clients and nodes.
+     */
+    class TopicKeyPair
+    {
+    private:
+        bytestring encryptionKey;
+        bytestring authenticationKey;
+
+    public:
+        static const int KeyLength = 16;
+
+        TopicKeyPair();
+        TopicKeyPair(std::string source);
+        TopicKeyPair(bytestring enc_key, bytestring auth_key);
+
+        bytestring* getEncKey();
+        bytestring* getAuthKey();
+
+        std::string toString();
+    };
+
+    bytestring stringToSec(std::string str);
+    std::string secToString(bytestring block);
 
     std::string hex(byte val[], size_t len);
     std::string hex(std::string val);
-    std::string hex(CryptoPP::SecByteBlock val);
+    std::string hex(bytestring val);
     std::string hex(CryptoPP::RSA::PrivateKey key);
     std::string hex(CryptoPP::RSA::PublicKey key);
 

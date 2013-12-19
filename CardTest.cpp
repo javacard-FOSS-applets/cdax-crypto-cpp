@@ -20,42 +20,11 @@ void log(std::string msg)
     std::cout << msg << std::endl << line << std::endl;
 }
 
-
-SmartCard* getCard()
-{
-    SmartCard *card = new SmartCard();
-
-    if (!card->selectReader()) {
-        log(card->getError());
-        return NULL;
-    }
-
-    if (!card->waitForCard()) {
-        log(card->getError());
-        return NULL;
-    }
-
-    return card;
-}
-
-bool storePrivate(SmartCard *card, RSAKeyPair keyPair)
-{
-    if (!card->storePrivateKey(keyPair.getPrivate())) {
-        log(card->getError());
-        return false;
-    }
-
-    log("wrote private key to card");
-
-    return true;
-}
-
-
 void signatuteTest()
 {
     log("> starting tests...");
 
-    SmartCard *card = getCard();
+    SmartCard *card = new SmartCard();
 
     if (card == NULL) {
         return;
@@ -63,25 +32,26 @@ void signatuteTest()
 
     // Generate RSA Parameters
     CryptoPP::InvertibleRSAFunction params;
-    params.GenerateRandomWithKeySize(prng, 1024);
-    RSAKeyPair keyPair(params);
+    params.GenerateRandomWithKeySize(prng, 2048);
+    RSAKeyPair* keyPair = new RSAKeyPair(params);
 
-    storePrivate(card, keyPair);
+    CryptoPP::RSA::PublicKey* clientPub = card->initialize(keyPair->getPublic());
+
+    if (clientPub == NULL) {
+        log(card->getError());
+        return;
+    }
 
     // create message
     Message msg("test_id", "test_topic", "test_data");
 
-    msg.sign(keyPair.getPrivate());
-    std::string device_sig = msg.getSignature().str();
-
     msg.signOnCard(card);
-    std::string card_sig = msg.getSignature().str();
 
-    if (device_sig.compare(card_sig) != 0) {
-        log("> signatures did not match");
-        log("> device: " + hex(device_sig) + "\ncard: " + hex(card_sig));
-    } else {
+    if (msg.verify(clientPub)) {
         log("> signatures matched");
+    } else {
+        log("> signatures did not match");
+        log("> signature: " + msg.getSignature().hex());
     }
 }
 

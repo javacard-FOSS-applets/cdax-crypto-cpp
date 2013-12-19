@@ -26,18 +26,18 @@ namespace cdax {
      * Retrieve the private key part
      * @return CryptoPP::RSA::PrivateKey private key
      */
-    CryptoPP::RSA::PrivateKey RSAKeyPair::getPrivate()
+    CryptoPP::RSA::PrivateKey* RSAKeyPair::getPrivate()
     {
-        return this->privateKey;
+        return &this->privateKey;
     }
 
     /**
      * Retrieve the public key part
      * @return CryptoPP::RSA::PublicKey public key
      */
-    CryptoPP::RSA::PublicKey RSAKeyPair::getPublic()
+    CryptoPP::RSA::PublicKey* RSAKeyPair::getPublic()
     {
-        return this->publicKey;
+        return &this->publicKey;
     }
 
     /**
@@ -65,11 +65,11 @@ namespace cdax {
     }
 
     /**
-     * Create a topic key pair from two CryptoPP::SecByteBlock values
-     * @param CryptoPP::SecByteBlock enc_key encryption key
-     * @param CryptoPP::SecByteBlock auth_key authentication key
+     * Create a topic key pair from two bytestring values
+     * @param bytestring enc_key encryption key
+     * @param bytestring auth_key authentication key
      */
-    TopicKeyPair::TopicKeyPair(CryptoPP::SecByteBlock enc_key, CryptoPP::SecByteBlock auth_key)
+    TopicKeyPair::TopicKeyPair(bytestring enc_key, bytestring auth_key)
     {
         this->encryptionKey = enc_key;
         this->authenticationKey = auth_key;
@@ -86,30 +86,30 @@ namespace cdax {
 
     /**
      * Get encryption key
-     * @return CryptoPP::SecByteBlock encryption key
+     * @return bytestring encryption key
      */
-    CryptoPP::SecByteBlock TopicKeyPair::getEncKey()
+    bytestring* TopicKeyPair::getEncKey()
     {
-        return this->encryptionKey;
+        return &this->encryptionKey;
     }
 
     /**
      * Get the authentication key
-     * @return CryptoPP::SecByteBlock authentication key
+     * @return bytestring authentication key
      */
-    CryptoPP::SecByteBlock TopicKeyPair::getAuthKey()
+    bytestring* TopicKeyPair::getAuthKey()
     {
-        return this->authenticationKey;
+        return &this->authenticationKey;
     }
 
     /**
-     * convert string to CryptoPP::SecByteBlock
+     * convert string to bytestring
      * @param  str string source
-     * @return CryptoPP::SecByteBlock
+     * @return bytestring
      */
-    CryptoPP::SecByteBlock stringToSec(std::string str)
+    bytestring stringToSec(std::string str)
     {
-        CryptoPP::SecByteBlock block(str.size());
+        bytestring block(str.size());
         block.Assign((const unsigned char*) str.c_str(), str.size());
         return block;
     }
@@ -159,11 +159,11 @@ namespace cdax {
     }
 
     /**
-     * Convert CryptoPP::SecByteBlock to string
-     * @param  CryptoPP::SecByteBlock block source
+     * Convert bytestring to string
+     * @param  bytestring block source
      * @return string
      */
-    std::string secToString(CryptoPP::SecByteBlock block)
+    std::string secToString(bytestring block)
     {
         return std::string(block.begin(), block.end());
     }
@@ -206,11 +206,11 @@ namespace cdax {
     }
 
     /**
-     * Format CryptoPP::SecByteBlock as HEX string
-     * @param  CryptoPP::SecByteBlock val input value
+     * Format bytestring as HEX string
+     * @param  bytestring val input value
      * @return string the HEX formatted string
      */
-    std::string hex(CryptoPP::SecByteBlock val)
+    std::string hex(bytestring val)
     {
         std::ostringstream ss;
         ss << '(' << val.size() << " byte) " << std::hex;
@@ -232,7 +232,7 @@ namespace cdax {
     {
         CryptoPP::ByteQueue bq;
         val->Save(bq);
-        CryptoPP::SecByteBlock publicKeyArray((unsigned int)bq.MaxRetrievable());
+        bytestring publicKeyArray((unsigned int)bq.MaxRetrievable());
         bq.Get((byte*)publicKeyArray, publicKeyArray.size());
         return hex(publicKeyArray);
     }

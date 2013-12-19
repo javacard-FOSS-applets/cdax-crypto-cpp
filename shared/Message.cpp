@@ -94,7 +94,7 @@ namespace cdax {
      * The HMAC is appended to the message topic data before encrypting
      * @param bytestring key
      */
-    void Message::encryptAndHMAC(bytestring key)
+    void Message::encryptAndHMAC(bytestring* key)
     {
         this->encrypt(key);
         this->hmac(key);
@@ -107,7 +107,7 @@ namespace cdax {
      * @param  bytestring key AES and HMAC key
      * @return bool true if decryption and verification are successful
      */
-    bool Message::verifyAndDecrypt(bytestring key)
+    bool Message::verifyAndDecrypt(bytestring* key)
     {
         this->signature = this->data.str().substr(this->data.size() - 32, 32);
         this->data = this->data.str().substr(0, this->data.size() - 32);
@@ -123,11 +123,11 @@ namespace cdax {
      * Encrypt the message topic data using AES CBC and a fresh random IV
      * @param bytestring key encryption key
      */
-    void Message::encrypt(bytestring key)
+    void Message::encrypt(bytestring* key)
     {
         generateIV(CryptoPP::AES::BLOCKSIZE);
         std::string ciphertext;
-        CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key, key.size(), this->iv);
+        CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key->BytePtr(), key->size(), this->iv);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
         CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(encrypt, ss);
         CryptoPP::StringSource(this->data.str(), true, enc);
@@ -140,11 +140,11 @@ namespace cdax {
      * @param  bytestring key AES key
      * @return bool true if decryption was successful
      */
-    bool Message::decrypt(bytestring key)
+    bool Message::decrypt(bytestring* key)
     {
         try {
             std::string plaintext;
-            CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key, key.size(), this->iv);
+            CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key->BytePtr(), key->size(), this->iv);
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(decrypt, ss);
             CryptoPP::StringSource(this->data.str(), true, enc);
@@ -163,10 +163,10 @@ namespace cdax {
      * topic name, topic data and possibly the encryption IV as payload data
      * @param bytestring key HMAC key
      */
-    void Message::hmac(bytestring key)
+    void Message::hmac(bytestring* key)
     {
         std::string sig;
-        CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, key.size());
+        CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::HashFilter *hf = new CryptoPP::HashFilter(hmac, ss);
         CryptoPP::StringSource(this->getPayloadData(), true, hf);
@@ -178,10 +178,10 @@ namespace cdax {
      * @param  bytestring key HMAC key
      * @return bool true if the verification was successful
      */
-    bool Message::verify(bytestring key)
+    bool Message::verify(bytestring* key)
     {
         try {
-            CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, key.size());
+            CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
             const int flags = CryptoPP::HashVerificationFilter::THROW_EXCEPTION | CryptoPP::HashVerificationFilter::HASH_AT_END;
             CryptoPP::HashVerificationFilter *hvf = new CryptoPP::HashVerificationFilter(hmac, NULL, flags);
             CryptoPP::StringSource(this->getPayloadData() + this->signature.str(), true, hvf);
@@ -197,12 +197,12 @@ namespace cdax {
      * Encrypt the message payload data with RSA RSAES OAEP SHA
      * @param CryptoPP::RSA::PublicKey key the RSA public key to use
      */
-    void Message::encrypt(CryptoPP::RSA::PublicKey key)
+    void Message::encrypt(CryptoPP::RSA::PublicKey* key)
     {
         std::string ciphertext;
         CryptoPP::AutoSeededRandomPool prng;
 
-        CryptoPP::RSAES_OAEP_SHA_Encryptor encryptor(key);
+        CryptoPP::RSAES_OAEP_SHA_Encryptor encryptor(*key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
         CryptoPP::PK_EncryptorFilter *ef = new CryptoPP::PK_EncryptorFilter(prng, encryptor, ss);
         CryptoPP::StringSource(this->data.str(), true, ef);
@@ -215,13 +215,13 @@ namespace cdax {
      * @param  CryptoPP::RSA::PrivateKey key the private key
      * @return bool true if decryption was successful
      */
-    bool Message::decrypt(CryptoPP::RSA::PrivateKey key)
+    bool Message::decrypt(CryptoPP::RSA::PrivateKey* key)
     {
         std::string plaintext;
         CryptoPP::AutoSeededRandomPool prng;
 
         try {
-            CryptoPP::RSAES_OAEP_SHA_Decryptor decryptor(key);
+            CryptoPP::RSAES_OAEP_SHA_Decryptor decryptor(*key);
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::PK_DecryptorFilter *df = new CryptoPP::PK_DecryptorFilter(prng, decryptor, ss);
             CryptoPP::StringSource(this->data.str(), true, df);
@@ -240,12 +240,12 @@ namespace cdax {
      * topic name, topic data and possibly the encryption IV as payload data
      * @param CryptoPP::RSA::PrivateKey key the RSa private key
      */
-    void Message::sign(CryptoPP::RSA::PrivateKey key)
+    void Message::sign(CryptoPP::RSA::PrivateKey* key)
     {
         std::string sig;
         CryptoPP::AutoSeededRandomPool prng;
 
-        CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(key);
+        CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(*key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
         CryptoPP::StringSource(this->getPayloadData(), true, sf);
@@ -253,7 +253,7 @@ namespace cdax {
         this->signature = sig;
     }
 
-    void Message::signOnCard(SmartCard *card)
+    void Message::signOnCard(SmartCard* card)
     {
         bytestring buffer = this->getPayloadData();
         card->signMessage(buffer);
@@ -265,10 +265,10 @@ namespace cdax {
      * @param  CryptoPP::RSA::PublicKey key the RSA public key
      * @return bool true if verification was successful
      */
-    bool Message::verify(CryptoPP::RSA::PublicKey key)
+    bool Message::verify(CryptoPP::RSA::PublicKey* key)
     {
         try {
-            CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(key);
+            CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(*key);
             const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
             CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
             CryptoPP::StringSource(this->getPayloadData() + this->signature.str(), true, svf);
