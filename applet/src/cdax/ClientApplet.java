@@ -71,19 +71,13 @@ public class ClientApplet extends Applet implements ExtendedLength
         switch (INS) {
             case STORE_PRIV:
                 this.storePrivate(buffer);
-                // apdu.setOutgoing();
-
-                this.priv.getP(buffer, (short) 0);
-                apdu.setOutgoingAndSend((short) 0, (short) 64);
+                apdu.setOutgoing();
                 break;
             case SIGN_DATA:
                 Signature sig = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
                 sig.init(this.priv, Signature.MODE_SIGN);
                 short sig_len = sig.sign(buffer, HEADER_LEN, LEN, buffer, (short) (LEN + HEADER_LEN));
                 apdu.setOutgoingAndSend((short) (LEN + HEADER_LEN), sig_len);
-
-                // this.priv.getP(buffer, (short) 0);
-                // apdu.setOutgoingAndSend((short) 0, (short) 64);
                 break;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);

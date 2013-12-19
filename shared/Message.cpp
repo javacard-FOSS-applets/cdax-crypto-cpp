@@ -255,17 +255,9 @@ namespace cdax {
 
     void Message::signOnCard(SmartCard *card)
     {
-        std::string payload = this->getPayloadData();
-        size_t buffer_len = payload.length();
-        byte* buffer = new byte[buffer_len];
-        memcpy(buffer, payload.data(), buffer_len);
-
-        // card->signMessage(buffer, buffer_len);
-
-
-        std::cout << "app level: " << hex(buffer, buffer_len) << std::endl;
-
-        // this->signature = std::string((char*) buffer, buffer_len);
+        bytestring buffer = this->getPayloadData();
+        card->signMessage(buffer);
+        this->signature = buffer;
     }
 
     /**

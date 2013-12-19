@@ -72,10 +72,10 @@ void signatuteTest()
     Message msg("test_id", "test_topic", "test_data");
 
     msg.sign(keyPair.getPrivate());
-    std::string device_sig = msg.getSignature();
+    std::string device_sig = msg.getSignature().str();
 
     msg.signOnCard(card);
-    std::string card_sig = msg.getSignature();
+    std::string card_sig = msg.getSignature().str();
 
     if (device_sig.compare(card_sig) != 0) {
         log("> signatures did not match");
@@ -93,11 +93,7 @@ void signatuteTest()
  */
 int main(int argc, char* argv[])
 {
-    // bytestring data = "hello world";
-    bytestring data = {0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x00};
-
-    std::cout << "string value: " << data.str() << std::endl;
-    std::cout << "hex value: " << data.hex() << std::endl;
+    signatuteTest();
 
     return 0;
 }

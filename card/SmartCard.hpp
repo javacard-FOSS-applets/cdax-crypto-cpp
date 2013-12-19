@@ -29,8 +29,8 @@ namespace cdax {
         bool selectReader();
         bool waitForCard();
         bool selectApplet();
-        bool transmit(byte* apdu, size_t &apdu_len);
-        bool signMessage(byte* msg, size_t &msg_len);
+        bool transmit(bytestring &updu);
+        bool signMessage(bytestring &msg);
         bool storePrivateKey(CryptoPP::InvertibleRSAFunction params);
 
     };

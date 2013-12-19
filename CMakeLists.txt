@@ -23,12 +23,12 @@ include_directories( SYSTEM ${Boost_INCLUDE_DIR} ${PCSCLITE_INCLUDE_DIR} ${CRYPT
 set( LIBS ${LIBS} ${Boost_LIBRARIES} ${PCSCLITE_LIBRARY} ${CRYPTOPP_LIBRARIES} )
 
 
-# add_executable( test CardTest
-#     card/SmartCard
-#     shared/Message
-#     shared/Common
-# )
-# target_link_libraries( test ${LIBS} )
+add_executable( test CardTest
+    card/SmartCard
+    shared/Message
+    shared/Common
+)
+target_link_libraries( test ${LIBS} )
 
 # add_executable( simulator Main
 #     clients/Subscriber
@@ -43,8 +43,9 @@ set( LIBS ${LIBS} ${Boost_LIBRARIES} ${PCSCLITE_LIBRARY} ${CRYPTOPP_LIBRARIES} )
 # )
 # target_link_libraries( simulator ${LIBS} )
 
-add_executable( test Test
+add_executable( msg_test Test
+    card/SmartCard
     shared/Message
     shared/Common
 )
-target_link_libraries( test ${LIBS} )
+target_link_libraries( msg_test ${LIBS} )

@@ -110,19 +110,19 @@ namespace cdax {
     }
 
 
-    bool SmartCard::transmit(byte* apdu, size_t &apdu_len)
+    bool SmartCard::transmit(bytestring &apdu)
     {
         SCARD_IO_REQUEST pioRecvPci;
         byte* response_buffer = new byte[255];
         DWORD resp_buf_len = 255;
 
-        std::cout << "> send packet: " << hex(apdu, apdu_len) << std::endl;
+        std::cout << "> send packet: " << apdu.hex() << std::endl;
 
         LONG rv = SCardTransmit(
             this->card,
             SCARD_PCI_T1,
-            apdu,
-            apdu_len,
+            apdu.BytePtr(),
+            apdu.SizeInBytes(),
             &pioRecvPci,
             response_buffer,
             &resp_buf_len
@@ -132,16 +132,11 @@ namespace cdax {
             this->last_error = pcsc_stringify_error(rv);
             return false;
         }
+        // todo check response code
 
-        std::cout << "> receive packet: " << hex(response_buffer, resp_buf_len) << std::endl;
+        apdu.Assign(response_buffer, resp_buf_len - 2);
 
-        // strip response code
-        resp_buf_len = resp_buf_len - 2;
-        // delete apdu;
-        apdu = new byte[resp_buf_len];
-        apdu_len = resp_buf_len;
-        memcpy(apdu, response_buffer, resp_buf_len);
-        // delete response_buffer;
+        std::cout << "> receive packet: " << apdu.hex() << std::endl;
 
         return true;
     }
@@ -159,18 +154,18 @@ namespace cdax {
         size_t dq1_len = params.GetModPrime2PrivateExponent().MinEncodedSize();
         size_t data_len = p_len + q_len + pq_len + dp1_len + dq1_len;
 
-        byte* data = new byte[header_len + data_len];
+        bytestring data(header_len + data_len);
 
         size_t offset = header_len;
-        params.GetPrime1().Encode(data + offset, p_len);
+        params.GetPrime1().Encode(data.BytePtr() + offset, p_len);
         offset = offset + p_len;
-        params.GetPrime2().Encode(data + offset, q_len);
+        params.GetPrime2().Encode(data.BytePtr() + offset, q_len);
         offset = offset + q_len;
-        params.GetMultiplicativeInverseOfPrime2ModPrime1().Encode(data + offset, pq_len);
+        params.GetMultiplicativeInverseOfPrime2ModPrime1().Encode(data.BytePtr() + offset, pq_len);
         offset = offset + pq_len;
-        params.GetModPrime1PrivateExponent().Encode(data + offset, dp1_len);
+        params.GetModPrime1PrivateExponent().Encode(data.BytePtr() + offset, dp1_len);
         offset = offset + dp1_len;
-        params.GetModPrime2PrivateExponent().Encode(data + offset, dq1_len);
+        params.GetModPrime2PrivateExponent().Encode(data.BytePtr() + offset, dq1_len);
         offset = offset + dq1_len;
 
         // class byte, instruction byte, length field encoded in 3 bytes
@@ -180,21 +175,17 @@ namespace cdax {
         data[5] = (data_len >> 8) & 0xff;
         data[6] = data_len & 0xff;
 
-        size_t apdu_len = header_len + data_len;
-        bool result = this->transmit(data, apdu_len);
-
-        // delete data;
-
-        return result;
+        return this->transmit(data);
     }
 
-    bool SmartCard::signMessage(byte* msg, size_t &msg_len)
+    bool SmartCard::signMessage(bytestring &msg)
     {
         this->selectApplet();
 
         size_t header_len = 7;
+        size_t msg_len = msg.size();
 
-        byte* data = new byte[header_len + msg_len];
+        bytestring data(header_len);
 
         // class byte, instruction byte, length field encoded in 3 bytes
         data[0] = 0x80;
@@ -203,25 +194,15 @@ namespace cdax {
         data[5] = (msg_len >> 8) & 0xff;
         data[6] = msg_len & 0xff;
 
-        memcpy(data + header_len, msg, msg_len);
+        msg.Assign(data + msg);
 
-        size_t apdu_len = header_len + msg_len;
-        bool result = this->transmit(data, apdu_len);
-
-        // delete msg;
-        msg = new byte[apdu_len];
-        msg_len = apdu_len;
-        memcpy(msg, data, apdu_len);
-        // delete data;
-
-        return result;
+        return this->transmit(msg);
     }
 
     bool SmartCard::selectApplet()
     {
         // select applet apdu
-        size_t select_len = 11;
-        byte* select = new byte[select_len];
+        bytestring select(11);
         select[0] = 0x00;
         select[1] = 0xA4;
         select[2] = 0x04;
@@ -233,7 +214,7 @@ namespace cdax {
         select[8] = 0x00;
         select[9] = 0x00;
         select[10] = 0x42;
-        return this->transmit(select, select_len);
+        return this->transmit(select);
     }
 
 };
