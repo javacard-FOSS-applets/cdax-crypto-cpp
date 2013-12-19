@@ -39,101 +39,98 @@ namespace cdax {
     {
     private:
         // sender identity
-        std::string id;
+        bytestring id;
 
         // topic name
-        std::string topic;
+        bytestring topic;
 
         // topic data or message payload
-        std::string data;
+        bytestring data;
 
         // RSA signature or HMAC
-        std::string signature;
+        bytestring signature;
 
         // time of message creation
         std::time_t timestamp;
 
         // AES encryption initialisation vector
-        CryptoPP::SecByteBlock iv;
+        bytestring iv;
 
         void generateIV(int length);
-        std::string applyCipher(CryptoPP::StreamTransformation &t);
+        // bytestring applyCipher(CryptoPP::StreamTransformation &t);
         std::string getPayloadData();
 
-        CryptoPP::SecByteBlock getIV();
-        void setIV(CryptoPP::SecByteBlock sec_iv);
+        bytestring getIV();
+        void setIV(bytestring sec_iv);
 
         friend std::ostream &operator<< (std::ostream &out, const Message &msg);
-        friend class boost::serialization::access;
+        // friend class boost::serialization::access;
 
-        /**
-         * Encode message content to boost archive model
-         */
-        template<class Archive>
-        void save(Archive & ar, const unsigned int version) const
-        {
-            ar << this->id;
-            ar << this->topic;
-            ar << this->data;
-            ar << this->signature;
+        // /**
+        //  * Encode message content to boost archive model
+        //  */
+        // template<class Archive>
+        // void save(Archive & ar, const unsigned int version) const
+        // {
+        //     ar << this->id.str();
+        //     ar << this->topic.str();
+        //     ar << this->data.str();
+        //     ar << this->signature.str();
 
-            std::string tmp_timestamp = boost::lexical_cast<std::string>(this->timestamp);
-            ar << tmp_timestamp;
+        //     std::string tmp_timestamp = boost::lexical_cast<std::string>(this->timestamp);
+        //     ar << tmp_timestamp;
 
-            std::string tmp_iv = secToString(this->iv);
-            ar << tmp_iv;
-        }
+        //     ar << this->iv.str();
+        // }
 
-        /**
-         * Decode message contents from boost archive model
-         */
-        template<class Archive>
-        void load(Archive & ar, const unsigned int version)
-        {
-            ar >> this->id;
-            ar >> this->topic;
-            ar >> this->data;
-            ar >> this->signature;
+        // *
+        //  * Decode message contents from boost archive model
 
-            std::string tmp_timestamp;
-            ar >> tmp_timestamp;
-            this->timestamp = boost::lexical_cast<int>(tmp_timestamp);
+        // template<class Archive>
+        // void load(Archive & ar, const unsigned int version)
+        // {
+        //     ar >> this->id;
+        //     ar >> this->topic;
+        //     ar >> this->data;
+        //     ar >> this->signature;
 
-            std::string tmp_iv;
-            ar >> tmp_iv;
-            this->iv = stringToSec(tmp_iv);
-        }
+        //     std::string tmp_timestamp;
+        //     ar >> tmp_timestamp;
+        //     this->timestamp = boost::lexical_cast<int>(tmp_timestamp);
 
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int file_version)
-        {
-            boost::serialization::split_member(ar, *this, file_version);
-        }
+        //     ar >> this->iv;
+        // }
+
+        // template<class Archive>
+        // void serialize(Archive& ar, const unsigned int file_version)
+        // {
+        //     boost::serialization::split_member(ar, *this, file_version);
+        // }
 
     public:
         Message();
 
-        Message(std::string identity, std::string topic_name, std::string topic_data);
+        Message(bytestring identity, bytestring topic_name, bytestring topic_data);
 
-        void setId(std::string identity);
-        std::string getId();
+        void setId(bytestring identity);
+        bytestring getId();
 
-        void setTopic(std::string topic_name);
-        std::string getTopic();
+        void setTopic(bytestring topic_name);
+        bytestring getTopic();
 
-        void setData(std::string topic_data);
-        std::string getData();
+        void setData(bytestring topic_data);
+        bytestring getData();
 
-        std::string getSignature();
+        bytestring getSignature();
 
-        void encryptAndHMAC(CryptoPP::SecByteBlock key);
-        bool verifyAndDecrypt(CryptoPP::SecByteBlock key);
+        void encryptAndHMAC(bytestring key);
+        bool verifyAndDecrypt(bytestring key);
 
-        void encrypt(CryptoPP::SecByteBlock key);
-        bool decrypt(CryptoPP::SecByteBlock key);
+        void encrypt(bytestring key);
+        bool decrypt(bytestring key);
 
-        void hmac(CryptoPP::SecByteBlock key);
-        bool verify(CryptoPP::SecByteBlock key);
+        void hmac(bytestring key);
+        bool verify(bytestring key);
 
         void encrypt(CryptoPP::RSA::PublicKey key);
         bool decrypt(CryptoPP::RSA::PrivateKey key);

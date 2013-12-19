@@ -50,20 +50,15 @@ bool storePrivate(SmartCard *card, RSAKeyPair keyPair)
     return true;
 }
 
-/**
- * Eceute message unit tests
- * @param  argc ignored
- * @param  argv ignored
- * @return int reponse code
- */
-int main(int argc, char* argv[])
+
+void signatuteTest()
 {
     log("> starting tests...");
 
     SmartCard *card = getCard();
 
     if (card == NULL) {
-        return 1;
+        return;
     }
 
     // Generate RSA Parameters
@@ -88,6 +83,21 @@ int main(int argc, char* argv[])
     } else {
         log("> signatures matched");
     }
+}
+
+/**
+ * Eceute message unit tests
+ * @param  argc ignored
+ * @param  argv ignored
+ * @return int reponse code
+ */
+int main(int argc, char* argv[])
+{
+    // bytestring data = "hello world";
+    bytestring data = {0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x00};
+
+    std::cout << "string value: " << data.str() << std::endl;
+    std::cout << "hex value: " << data.hex() << std::endl;
 
     return 0;
 }

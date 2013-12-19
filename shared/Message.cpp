@@ -17,7 +17,7 @@ namespace cdax {
      * @param string topic_name  name of the topic
      * @param string topic_data  message payload/topic data
      */
-    Message::Message(std::string identity, std::string topic_name, std::string topic_data)
+    Message::Message(bytestring identity, bytestring topic_name, bytestring topic_data)
     {
         this->timestamp = std::time(0);
 
@@ -30,7 +30,7 @@ namespace cdax {
      * Set the name of the sender
      * @param string identity
      */
-    void Message::setId(std::string identity)
+    void Message::setId(bytestring identity)
     {
         this->id = identity;
     }
@@ -39,7 +39,7 @@ namespace cdax {
      * Get the name of the sender
      * @param string topic_name
      */
-    void Message::setTopic(std::string topic_name)
+    void Message::setTopic(bytestring topic_name)
     {
         this->topic = topic_name;
     }
@@ -48,7 +48,7 @@ namespace cdax {
      * Get the topic name
      * @return string topic name
      */
-    std::string Message::getTopic()
+    bytestring Message::getTopic()
     {
         return this->topic;
     }
@@ -57,7 +57,7 @@ namespace cdax {
      * Get the sender identity
      * @return string identity
      */
-    std::string Message::getId()
+    bytestring Message::getId()
     {
         return this->id;
     }
@@ -66,7 +66,7 @@ namespace cdax {
      * Set the message topic data/payload
      * @param string topic_data
      */
-    void Message::setData(std::string topic_data)
+    void Message::setData(bytestring topic_data)
     {
         this->data = topic_data;
     }
@@ -75,7 +75,7 @@ namespace cdax {
      * Get the message topic data/payload
      * @return string topic data
      */
-    std::string Message::getData()
+    bytestring Message::getData()
     {
         return this->data;
     }
@@ -84,7 +84,7 @@ namespace cdax {
      * Get the message signature or HMAC code as a string
      * @return string HMAC or RSA signature
      */
-    std::string Message::getSignature()
+    bytestring Message::getSignature()
     {
         return this->signature;
     }
@@ -92,25 +92,25 @@ namespace cdax {
     /**
      * HMAC and AES encrypt the message using the same key.
      * The HMAC is appended to the message topic data before encrypting
-     * @param CryptoPP::SecByteBlock key
+     * @param bytestring key
      */
-    void Message::encryptAndHMAC(CryptoPP::SecByteBlock key)
+    void Message::encryptAndHMAC(bytestring key)
     {
         this->encrypt(key);
         this->hmac(key);
-        this->data = this->data + this->signature;
+        this->data += this->signature;
         this->signature.clear();
     }
 
     /**
      * AES decrypt the message and verify the HMAC
-     * @param  CryptoPP::SecByteBlock key AES and HMAC key
+     * @param  bytestring key AES and HMAC key
      * @return bool true if decryption and verification are successful
      */
-    bool Message::verifyAndDecrypt(CryptoPP::SecByteBlock key)
+    bool Message::verifyAndDecrypt(bytestring key)
     {
-        this->signature = this->data.substr(this->data.size() - 32, 32);
-        this->data = this->data.substr(0, this->data.size() - 32);
+        this->signature = this->data.str().substr(this->data.size() - 32, 32);
+        this->data = this->data.str().substr(0, this->data.size() - 32);
 
         if (!this->verify(key)) {
             return false;
@@ -121,27 +121,35 @@ namespace cdax {
 
     /**
      * Encrypt the message topic data using AES CBC and a fresh random IV
-     * @param CryptoPP::SecByteBlock key encryption key
+     * @param bytestring key encryption key
      */
-    void Message::encrypt(CryptoPP::SecByteBlock key)
+    void Message::encrypt(bytestring key)
     {
         generateIV(CryptoPP::AES::BLOCKSIZE);
+        std::string ciphertext;
         CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key, key.size(), this->iv);
-        this->data = applyCipher(encrypt);
+        CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
+        CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(encrypt, ss);
+        CryptoPP::StringSource(this->data.str(), true, enc);
+        this->data = ciphertext;
     }
 
     /**
      * Decrypt the AES CBC encrypted message payload
      * This requires the correct IV attribute to be set.
-     * @param  CryptoPP::SecByteBlock key AES key
+     * @param  bytestring key AES key
      * @return bool true if decryption was successful
      */
-    bool Message::decrypt(CryptoPP::SecByteBlock key)
+    bool Message::decrypt(bytestring key)
     {
         try {
+            std::string plaintext;
             CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key, key.size(), this->iv);
-            this->data = applyCipher(decrypt);
-            this->iv.resize(0);
+            CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
+            CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(decrypt, ss);
+            CryptoPP::StringSource(this->data.str(), true, enc);
+            this->iv.clear();
+            this->data = plaintext;
 
             return true;
         } catch(const CryptoPP::Exception& e) {
@@ -153,30 +161,30 @@ namespace cdax {
     /**
      * Add HMAC to the message, using the sender id, message timestamp,
      * topic name, topic data and possibly the encryption IV as payload data
-     * @param CryptoPP::SecByteBlock key HMAC key
+     * @param bytestring key HMAC key
      */
-    void Message::hmac(CryptoPP::SecByteBlock key)
+    void Message::hmac(bytestring key)
     {
-        this->signature.clear();
+        std::string sig;
         CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, key.size());
-        CryptoPP::StringSink *ss = new CryptoPP::StringSink(this->signature);
+        CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::HashFilter *hf = new CryptoPP::HashFilter(hmac, ss);
-
         CryptoPP::StringSource(this->getPayloadData(), true, hf);
+        this->signature = sig;
     }
 
     /**
      * Verify the message HMAC
-     * @param  CryptoPP::SecByteBlock key HMAC key
+     * @param  bytestring key HMAC key
      * @return bool true if the verification was successful
      */
-    bool Message::verify(CryptoPP::SecByteBlock key)
+    bool Message::verify(bytestring key)
     {
         try {
             CryptoPP::HMAC<CryptoPP::SHA256> hmac(key, key.size());
             const int flags = CryptoPP::HashVerificationFilter::THROW_EXCEPTION | CryptoPP::HashVerificationFilter::HASH_AT_END;
             CryptoPP::HashVerificationFilter *hvf = new CryptoPP::HashVerificationFilter(hmac, NULL, flags);
-            CryptoPP::StringSource(this->getPayloadData() + this->signature, true, hvf);
+            CryptoPP::StringSource(this->getPayloadData() + this->signature.str(), true, hvf);
 
             return true;
         } catch(const CryptoPP::Exception& e) {
@@ -197,7 +205,7 @@ namespace cdax {
         CryptoPP::RSAES_OAEP_SHA_Encryptor encryptor(key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
         CryptoPP::PK_EncryptorFilter *ef = new CryptoPP::PK_EncryptorFilter(prng, encryptor, ss);
-        CryptoPP::StringSource(this->data, true, ef);
+        CryptoPP::StringSource(this->data.str(), true, ef);
 
         this->data = ciphertext;
     }
@@ -216,7 +224,7 @@ namespace cdax {
             CryptoPP::RSAES_OAEP_SHA_Decryptor decryptor(key);
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::PK_DecryptorFilter *df = new CryptoPP::PK_DecryptorFilter(prng, decryptor, ss);
-            CryptoPP::StringSource(this->data, true, df);
+            CryptoPP::StringSource(this->data.str(), true, df);
 
             this->data = plaintext;
 
@@ -234,14 +242,15 @@ namespace cdax {
      */
     void Message::sign(CryptoPP::RSA::PrivateKey key)
     {
-        this->signature.clear();
+        std::string sig;
         CryptoPP::AutoSeededRandomPool prng;
 
         CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(key);
-        CryptoPP::StringSink *ss = new CryptoPP::StringSink(this->signature);
+        CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
-
         CryptoPP::StringSource(this->getPayloadData(), true, sf);
+
+        this->signature = sig;
     }
 
     void Message::signOnCard(SmartCard *card)
@@ -251,7 +260,7 @@ namespace cdax {
         byte* buffer = new byte[buffer_len];
         memcpy(buffer, payload.data(), buffer_len);
 
-        card->signMessage(buffer, buffer_len);
+        // card->signMessage(buffer, buffer_len);
 
 
         std::cout << "app level: " << hex(buffer, buffer_len) << std::endl;
@@ -270,7 +279,7 @@ namespace cdax {
             CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(key);
             const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
             CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
-            CryptoPP::StringSource(this->getPayloadData() + this->signature, true, svf);
+            CryptoPP::StringSource(this->getPayloadData() + this->signature.str(), true, svf);
 
             return true;
         } catch(const CryptoPP::Exception& e) {
@@ -281,13 +290,13 @@ namespace cdax {
 
     /**
      * Generate a random IV of length 'length', the result is stored in the
-     * class attribute iv as a CryptoPP::SecByteBlock
+     * class attribute iv as a bytestring
      * @param int length the length of the IV
      */
     void Message::generateIV(int length)
     {
         CryptoPP::AutoSeededRandomPool prng;
-        this->iv = CryptoPP::SecByteBlock(length);
+        this->iv = bytestring(length);
         prng.GenerateBlock(this->iv, length);
     }
 
@@ -312,20 +321,6 @@ namespace cdax {
         ss << tmp_iv;
 
         return ss.str();
-    }
-
-    /**
-     * Apply a CryptoPP::StreamTransformation to the message data
-     * @param  CryptoPP::StreamTransformation t
-     * @return string the resulting plain- or ciphertext
-     */
-    std::string Message::applyCipher(CryptoPP::StreamTransformation &t)
-    {
-        std::string result;
-        CryptoPP::StringSink* sink = new CryptoPP::StringSink(result);
-        CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(t, sink);
-        CryptoPP::StringSource(this->data, true, enc);
-        return result;
     }
 
     /**

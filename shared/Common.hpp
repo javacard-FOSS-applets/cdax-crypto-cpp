@@ -67,6 +67,23 @@ namespace cdax {
         std::string toString();
     };
 
+    class bytestring : public CryptoPP::SecByteBlock
+    {
+    private:
+
+        friend std::ostream &operator<< (std::ostream &out, const bytestring &msg);
+    public:
+        bytestring(size_t size = 0) : CryptoPP::SecByteBlock(size) {};
+
+
+        bytestring(std::string source);
+        bytestring(const char* source);
+        const std::string hex();
+        const std::string str();
+
+        void clear();
+    };
+
     CryptoPP::SecByteBlock stringToSec(std::string str);
     std::string secToString(CryptoPP::SecByteBlock block);
 
