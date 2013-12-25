@@ -113,13 +113,25 @@ namespace cdax {
         return true;
     }
 
+    bool SmartCard::connect()
+    {
+        if (!this->waitForCard()) {
+            return false;
+        }
+
+        if (!this->selectApplet()) {
+            return false;
+        }
+
+        return true;
+    }
+
 
     bool SmartCard::transmit(bytestring &apdu)
     {
         SCARD_IO_REQUEST pioRecvPci;
         DWORD resp_buf_len = 1024;
         byte* response_buffer = new byte[resp_buf_len];
-
 
         std::cout << "> send packet: " << apdu.hex() << std::endl;
 
@@ -149,8 +161,6 @@ namespace cdax {
 
     bool SmartCard::storePrivateKey(CryptoPP::RSA::PrivateKey* privKey)
     {
-        this->selectApplet();
-
         size_t header_len = 7;
 
         size_t p_len = privKey->GetPrime1().MinEncodedSize();
@@ -186,8 +196,6 @@ namespace cdax {
 
     bool SmartCard::signMessage(bytestring &msg)
     {
-        this->selectApplet();
-
         size_t header_len = 7;
         size_t msg_len = msg.size();
 
@@ -225,14 +233,6 @@ namespace cdax {
 
     CryptoPP::RSA::PublicKey* SmartCard::initialize(CryptoPP::RSA::PublicKey* secServerPub)
     {
-        if (!this->waitForCard()) {
-            return NULL;
-        }
-
-        if (!this->selectApplet()) {
-            return NULL;
-        }
-
         size_t header_len = 7;
         size_t mod_len = secServerPub->GetModulus().MinEncodedSize();
         // size_t exp_len = secServerPub->GetPublicExponent().MinEncodedSize();

@@ -11,6 +11,7 @@
 #include <cryptopp/osrng.h>
 #include <cryptopp/queue.h>
 #include <cryptopp/rsa.h>
+#include <cryptopp/files.h>
 
 #define RED      "\033[22;31m"
 #define GREEN    "\033[22;32m"
@@ -45,18 +46,27 @@ namespace cdax {
     class RSAKeyPair
     {
     private:
-        CryptoPP::RSA::PublicKey publicKey;
-        CryptoPP::RSA::PrivateKey privateKey;
+        CryptoPP::RSA::PublicKey* publicKey;
+        CryptoPP::RSA::PrivateKey* privateKey;
+
+        static void saveKey(std::string filename, CryptoPP::CryptoMaterial* key);
+        static void loadKey(std::string filename, CryptoPP::CryptoMaterial* key);
 
     public:
         static const int KeyLength = 1024;
 
         RSAKeyPair();
-        RSAKeyPair(CryptoPP::InvertibleRSAFunction params);
+        RSAKeyPair(CryptoPP::RSA::PublicKey* pub, CryptoPP::RSA::PrivateKey* priv);
+        RSAKeyPair(CryptoPP::InvertibleRSAFunction &params);
 
         CryptoPP::RSA::PublicKey* getPublic();
         CryptoPP::RSA::PrivateKey* getPrivate();
 
+        static void savePubKey(std::string filename, CryptoPP::RSA::PublicKey* key);
+        static void savePrivKey(std::string filename, CryptoPP::RSA::PrivateKey* key);
+
+        static CryptoPP::RSA::PublicKey* loadPubKey(std::string filename);
+        static CryptoPP::RSA::PrivateKey* loadPrivKey(std::string filename);
     };
 
     /**
@@ -95,4 +105,6 @@ namespace cdax {
     std::string hex(CryptoPP::RSA::PublicKey key);
 
     std::string randomString(size_t length);
+
+    bool file_exists(const std::string& fileName);
 }

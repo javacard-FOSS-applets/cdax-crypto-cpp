@@ -16,10 +16,16 @@ namespace cdax {
      *
      * @param params CryptoPP::InvertibleRSAFunction params
      */
-    RSAKeyPair::RSAKeyPair(CryptoPP::InvertibleRSAFunction params)
+    RSAKeyPair::RSAKeyPair(CryptoPP::InvertibleRSAFunction &params)
     {
-         privateKey = CryptoPP::RSA::PrivateKey(params);
-         publicKey = CryptoPP::RSA::PublicKey(params);
+         privateKey = new CryptoPP::RSA::PrivateKey(params);
+         publicKey = new CryptoPP::RSA::PublicKey(params);
+    }
+
+    RSAKeyPair::RSAKeyPair(CryptoPP::RSA::PublicKey* pub, CryptoPP::RSA::PrivateKey* priv)
+    {
+        publicKey = pub;
+        privateKey = priv;
     }
 
     /**
@@ -28,7 +34,7 @@ namespace cdax {
      */
     CryptoPP::RSA::PrivateKey* RSAKeyPair::getPrivate()
     {
-        return &this->privateKey;
+        return this->privateKey;
     }
 
     /**
@@ -37,8 +43,55 @@ namespace cdax {
      */
     CryptoPP::RSA::PublicKey* RSAKeyPair::getPublic()
     {
-        return &this->publicKey;
+        return this->publicKey;
     }
+
+    void RSAKeyPair::saveKey(std::string filename, CryptoPP::CryptoMaterial* key)
+    {
+        CryptoPP::ByteQueue queue;
+        key->Save(queue);
+
+        CryptoPP::FileSink file(filename.c_str());
+
+        queue.CopyTo(file);
+        file.MessageEnd();
+    }
+
+    void RSAKeyPair::savePrivKey(std::string filename, CryptoPP::RSA::PrivateKey* key)
+    {
+        saveKey(filename, (CryptoPP::CryptoMaterial*) key);
+    }
+
+    void RSAKeyPair::savePubKey(std::string filename, CryptoPP::RSA::PublicKey* key)
+    {
+        saveKey(filename, (CryptoPP::CryptoMaterial*) key);
+    }
+
+    void RSAKeyPair::loadKey(std::string filename, CryptoPP::CryptoMaterial* key)
+    {
+        CryptoPP::ByteQueue queue;
+        CryptoPP::FileSource file(filename.c_str(), true);
+
+        file.TransferTo(queue);
+        queue.MessageEnd();
+
+        key->Load(queue);
+    }
+
+    CryptoPP::RSA::PublicKey* RSAKeyPair::loadPubKey(std::string filename)
+    {
+        CryptoPP::RSA::PublicKey* key = new CryptoPP::RSA::PublicKey();
+        loadKey(filename, (CryptoPP::CryptoMaterial*) key);
+        return key;
+    }
+
+    CryptoPP::RSA::PrivateKey* RSAKeyPair::loadPrivKey(std::string filename)
+    {
+        CryptoPP::RSA::PrivateKey* key = new CryptoPP::RSA::PrivateKey();
+        loadKey(filename, (CryptoPP::CryptoMaterial*) key);
+        return key;
+    }
+
 
     /**
      * Empty contructor
@@ -273,6 +326,13 @@ namespace cdax {
         std::string str(length, 0);
         std::generate_n(str.begin(), length, randchar);
         return str;
+    }
+
+
+    bool file_exists(const std::string& fileName)
+    {
+        std::ifstream infile(fileName);
+        return infile.good();
     }
 
 }

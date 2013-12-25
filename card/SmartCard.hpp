@@ -33,6 +33,7 @@ namespace cdax {
         std::string getError();
 
         bool storePrivateKey(CryptoPP::RSA::PrivateKey* privKey);
+        bool connect();
         CryptoPP::RSA::PublicKey* initialize(CryptoPP::RSA::PublicKey* secServerPub);
 
         bool signMessage(bytestring &msg);
