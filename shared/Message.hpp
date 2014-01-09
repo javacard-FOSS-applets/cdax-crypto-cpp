@@ -139,6 +139,7 @@ namespace cdax {
         bool verify(CryptoPP::RSA::PublicKey* key);
 
         void signOnCard(SmartCard* card);
+        bool verifyOnCard(SmartCard* card);
     };
 
 }

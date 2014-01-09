@@ -22,7 +22,11 @@ public class ClientApplet extends Applet implements ExtendedLength
     private static final byte CDAX_CLA = (byte) 0x80;
 
     private static final byte INIT = (byte) 0x01;
-    private static final byte SIGN_DATA = (byte) 0x03;
+
+    private static final byte RSA_SIGN = (byte) 0x10;
+    private static final byte RSA_VERIFY = (byte) 0x11;
+    private static final byte RSA_ENC = (byte) 0x12;
+    private static final byte RSA_DEC = (byte) 0x13;
 
     private static final short HEADER_LEN = 7;
 
@@ -30,6 +34,7 @@ public class ClientApplet extends Applet implements ExtendedLength
     private static final short RSA_CRT_PARAM_LEN = 128;
     private static final short RSA_MOD_LEN = 256;
     private static final short RSA_EXP_LEN = 3;
+    private static final short RSA_SIGN_LEN = 256;
 
     // client RSA key pair
     private KeyPair keyPair;
@@ -78,11 +83,19 @@ public class ClientApplet extends Applet implements ExtendedLength
                 pub.getExponent(buffer, RSA_MOD_LEN);
                 apdu.setOutgoingAndSend((short) 0, (short) (RSA_MOD_LEN + RSA_EXP_LEN));
                 break;
-            case SIGN_DATA:
-                Signature sig = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
-                sig.init(this.keyPair.getPrivate(), Signature.MODE_SIGN);
-                short sig_len = sig.sign(buffer, HEADER_LEN, LEN, buffer, (short) (LEN + HEADER_LEN));
+            case RSA_SIGN:
+                Signature signSig = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
+                signSig.init(this.keyPair.getPrivate(), Signature.MODE_SIGN);
+                short sig_len = signSig.sign(buffer, HEADER_LEN, LEN, buffer, (short) (LEN + HEADER_LEN));
                 apdu.setOutgoingAndSend((short) (LEN + HEADER_LEN), sig_len);
+                break;
+            case RSA_VERIFY:
+                Signature verSig = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
+                verSig.init(this.masterKey, Signature.MODE_VERIFY);
+                short dataLen = (short) (LEN - RSA_SIGN_LEN - HEADER_LEN);
+                boolean result = verSig.verify(buffer, HEADER_LEN, dataLen, buffer, (short) (LEN - RSA_SIGN_LEN), RSA_SIGN_LEN);
+                buffer[0] = (byte) (result ? 0 : 1);
+                apdu.setOutgoingAndSend((short) 0, (short) 1);
                 break;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
@@ -106,26 +119,5 @@ public class ClientApplet extends Applet implements ExtendedLength
         this.masterKey.setModulus(buffer, offset, RSA_MOD_LEN);
         offset += RSA_MOD_LEN;
         this.masterKey.setExponent(buffer, offset, RSA_EXP_LEN);
-    }
-
-    private void storePrivate(byte[] buffer)
-    {
-        RSAPrivateCrtKey priv = (RSAPrivateCrtKey) KeyBuilder.buildKey(
-            KeyBuilder.TYPE_RSA_CRT_PRIVATE,
-            KeyBuilder.LENGTH_RSA_2048,
-            false
-        );
-
-        short offset = HEADER_LEN;
-
-        priv.setP(buffer, offset, RSA_CRT_PARAM_LEN);
-        offset += RSA_CRT_PARAM_LEN;
-        priv.setQ(buffer, offset, RSA_CRT_PARAM_LEN);
-        offset += RSA_CRT_PARAM_LEN;
-        priv.setPQ(buffer, offset, RSA_CRT_PARAM_LEN);
-        offset += RSA_CRT_PARAM_LEN;
-        priv.setDP1(buffer, offset, RSA_CRT_PARAM_LEN);
-        offset += RSA_CRT_PARAM_LEN;
-        priv.setDQ1(buffer, offset, RSA_CRT_PARAM_LEN);
     }
 }

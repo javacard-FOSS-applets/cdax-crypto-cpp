@@ -280,6 +280,13 @@ namespace cdax {
         }
     }
 
+    bool Message::verifyOnCard(SmartCard* card)
+    {
+        bytestring buffer = this->getPayloadData();
+        buffer.Assign(buffer + this->signature);
+        return card->verifyMessage(buffer);
+    }
+
     /**
      * Generate a random IV of length 'length', the result is stored in the
      * class attribute iv as a bytestring

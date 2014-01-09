@@ -203,7 +203,7 @@ namespace cdax {
 
         // class byte, instruction byte, length field encoded in 3 bytes
         data[0] = 0x80;
-        data[1] = 0x03;
+        data[1] = 0x10;
         data[4] = 0x00;
         data[5] = (msg_len >> 8) & 0xff;
         data[6] = msg_len & 0xff;
@@ -211,6 +211,29 @@ namespace cdax {
         msg.Assign(data + msg);
 
         return this->transmit(msg);
+    }
+
+    bool SmartCard::verifyMessage(bytestring &msg)
+    {
+        size_t header_len = 7;
+        size_t msg_len = msg.size();
+
+        bytestring data(header_len);
+
+        // class byte, instruction byte, length field encoded in 3 bytes
+        data[0] = 0x80;
+        data[1] = 0x11;
+        data[4] = 0x00;
+        data[5] = (msg_len >> 8) & 0xff;
+        data[6] = msg_len & 0xff;
+
+        msg.Assign(data + msg);
+
+        if(!this->transmit(msg)) {
+            return false;
+        }
+
+        return (msg[0] == 1);
     }
 
     bool SmartCard::selectApplet()

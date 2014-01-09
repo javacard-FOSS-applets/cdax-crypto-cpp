@@ -39,3 +39,7 @@ java \
     1> /dev/null
 echo " ...done"
 
+echo -n "> removing cached keys"
+rm build/data/client-pub.key
+echo " ...done"
+

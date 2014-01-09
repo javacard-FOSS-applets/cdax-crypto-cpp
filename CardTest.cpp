@@ -35,7 +35,7 @@ void signatuteTest()
         return;
     }
 
-    RSAKeyPair* keyPair;
+    RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
 
     // Generate RSA Parameters
@@ -44,20 +44,20 @@ void signatuteTest()
         CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
         CryptoPP::RSA::PrivateKey* priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
 
-        keyPair = new RSAKeyPair(pub, priv);
+        serverKeyPair = new RSAKeyPair(pub, priv);
     } else {
         CryptoPP::InvertibleRSAFunction params;
         params.GenerateRandomWithKeySize(prng, 2048);
-        keyPair = new RSAKeyPair(params);
+        serverKeyPair = new RSAKeyPair(params);
 
-        RSAKeyPair::savePrivKey("data/server-priv.key", keyPair->getPrivate());
-        RSAKeyPair::savePubKey("data/server-pub.key", keyPair->getPublic());
+        RSAKeyPair::savePrivKey("data/server-priv.key", serverKeyPair->getPrivate());
+        RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
     }
 
     if (file_exists("data/client-pub.key")) {
         clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
     } else {
-        clientPub = card->initialize(keyPair->getPublic());
+        clientPub = card->initialize(serverKeyPair->getPublic());
         RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
     }
 
@@ -72,10 +72,13 @@ void signatuteTest()
     msg.signOnCard(card);
 
     if (msg.verify(clientPub)) {
-        log("> signatures matched");
-    } else {
-        log("> signatures did not match");
-        log("> signature: " + msg.getSignature().hex());
+        log("> signatures verified");
+    }
+
+    msg.sign(serverKeyPair->getPrivate());
+
+    if (msg.verifyOnCard(card)) {
+        log("> signatures verified on card");
     }
 }
 
