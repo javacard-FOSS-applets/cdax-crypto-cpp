@@ -36,8 +36,19 @@ namespace cdax {
         bool connect();
         CryptoPP::RSA::PublicKey* initialize(CryptoPP::RSA::PublicKey* secServerPub);
 
-        bool signMessage(bytestring &msg);
-        bool verifyMessage(bytestring &msg);
+        bool storeKey(bytestring key);
+
+        bool sign(bytestring &msg);
+        bool verify(bytestring &msg);
+
+        bool encrypt(bytestring &msg);
+        bool decrypt(bytestring &msg);
+
+        bool appendHMAC(bytestring &msg);
+        bool verifyHMAC(bytestring &msg);
+
+        bool encryptAES(bytestring &msg);
+        bool decryptAES(bytestring &msg);
     };
 
 };

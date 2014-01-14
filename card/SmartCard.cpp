@@ -194,7 +194,26 @@ namespace cdax {
         return this->transmit(data);
     }
 
-    bool SmartCard::signMessage(bytestring &msg)
+    bool SmartCard::storeKey(bytestring key)
+    {
+        size_t header_len = 7;
+        size_t key_len = key.size();
+
+        bytestring data(header_len);
+
+        // class byte, instruction byte, length field encoded in 3 bytes
+        data[0] = 0x80;
+        data[1] = 0x03;
+        data[4] = 0x00;
+        data[5] = (key_len >> 8) & 0xff;
+        data[6] = key_len & 0xff;
+
+        key.Assign(data + key);
+
+        return this->transmit(key);
+    }
+
+    bool SmartCard::sign(bytestring &msg)
     {
         size_t header_len = 7;
         size_t msg_len = msg.size();
@@ -213,7 +232,53 @@ namespace cdax {
         return this->transmit(msg);
     }
 
-    bool SmartCard::verifyMessage(bytestring &msg)
+    bool SmartCard::encrypt(bytestring &msg)
+    {
+        size_t header_len = 7;
+        size_t msg_len = msg.size();
+
+        bytestring data(header_len);
+
+        // class byte, instruction byte, length field encoded in 3 bytes
+        data[0] = 0x80;
+        data[1] = 0x12;
+        data[4] = 0x00;
+        data[5] = (msg_len >> 8) & 0xff;
+        data[6] = msg_len & 0xff;
+
+        msg.Assign(data + msg);
+
+        if(!this->transmit(msg)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool SmartCard::decrypt(bytestring &msg)
+    {
+        size_t header_len = 7;
+        size_t msg_len = msg.size();
+
+        bytestring data(header_len);
+
+        // class byte, instruction byte, length field encoded in 3 bytes
+        data[0] = 0x80;
+        data[1] = 0x13;
+        data[4] = 0x00;
+        data[5] = (msg_len >> 8) & 0xff;
+        data[6] = msg_len & 0xff;
+
+        msg.Assign(data + msg);
+
+        if(!this->transmit(msg)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool SmartCard::verify(bytestring &msg)
     {
         size_t header_len = 7;
         size_t msg_len = msg.size();
@@ -223,6 +288,48 @@ namespace cdax {
         // class byte, instruction byte, length field encoded in 3 bytes
         data[0] = 0x80;
         data[1] = 0x11;
+        data[4] = 0x00;
+        data[5] = (msg_len >> 8) & 0xff;
+        data[6] = msg_len & 0xff;
+
+        msg.Assign(data + msg);
+
+        if(!this->transmit(msg)) {
+            return false;
+        }
+
+        return (msg[0] == 1);
+    }
+
+    bool SmartCard::appendHMAC(bytestring &msg)
+    {
+        size_t header_len = 7;
+        size_t msg_len = msg.size();
+
+        bytestring data(header_len);
+
+        // class byte, instruction byte, length field encoded in 3 bytes
+        data[0] = 0x80;
+        data[1] = 0x20;
+        data[4] = 0x00;
+        data[5] = (msg_len >> 8) & 0xff;
+        data[6] = msg_len & 0xff;
+
+        msg.Assign(data + msg);
+
+        return this->transmit(msg);
+    }
+
+    bool SmartCard::verifyHMAC(bytestring &msg)
+    {
+        size_t header_len = 7;
+        size_t msg_len = msg.size();
+
+        bytestring data(header_len);
+
+        // class byte, instruction byte, length field encoded in 3 bytes
+        data[0] = 0x80;
+        data[1] = 0x21;
         data[4] = 0x00;
         data[5] = (msg_len >> 8) & 0xff;
         data[6] = msg_len & 0xff;
@@ -257,25 +364,22 @@ namespace cdax {
     CryptoPP::RSA::PublicKey* SmartCard::initialize(CryptoPP::RSA::PublicKey* secServerPub)
     {
         size_t header_len = 7;
+
         size_t mod_len = secServerPub->GetModulus().MinEncodedSize();
         // size_t exp_len = secServerPub->GetPublicExponent().MinEncodedSize();
         size_t exp_len = 3; // always encode in 3 bytes, since the card expects 3 bytes
         size_t data_len = mod_len + exp_len;
 
-
-        std::cout << "mod len: " << mod_len << " exp len: " << exp_len << std::endl;
-
-        bytestring data(header_len + data_len);
-
-        secServerPub->GetModulus().Encode(data.BytePtr() + header_len, mod_len);
-        secServerPub->GetPublicExponent().Encode(data.BytePtr() + header_len + mod_len, exp_len);
+        bytestring data(header_len);
 
         // class byte, instruction byte, length field encoded in 3 bytes
         data[0] = 0x80;
         data[1] = 0x01;
+        data[2] = 0x00;
+        data[3] = 0x00;
         data[4] = 0x00;
-        data[5] = (data_len >> 8) & 0xff;
-        data[6] = data_len & 0xff;
+        data[5] = 0x00;
+        data[6] = 0x00;
 
         if (!this->transmit(data)) {
             return NULL;
@@ -289,6 +393,27 @@ namespace cdax {
 
         clientPubKey->SetModulus(CryptoPP::Integer(data.BytePtr(), mod_len));
         clientPubKey->SetPublicExponent(CryptoPP::Integer(data.BytePtr() + mod_len, exp_len));
+
+        std::cout << "mod len: " << mod_len << " exp len: " << exp_len << std::endl;
+
+
+        data.resize(header_len + data_len);
+
+        // class byte, instruction byte, length field encoded in 3 bytes
+        data[0] = 0x80;
+        data[1] = 0x02;
+        data[2] = 0x00;
+        data[3] = 0x00;
+        data[4] = 0x00;
+        data[5] = (data_len >> 8) & 0xff;
+        data[6] = data_len & 0xff;
+
+        secServerPub->GetModulus().Encode(data.BytePtr() + header_len, mod_len);
+        secServerPub->GetPublicExponent().Encode(data.BytePtr() + header_len + mod_len, exp_len);
+
+        if (!this->transmit(data)) {
+            return NULL;
+        }
 
         return clientPubKey;
     }

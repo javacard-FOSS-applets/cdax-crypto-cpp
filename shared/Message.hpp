@@ -138,8 +138,14 @@ namespace cdax {
         void sign(CryptoPP::RSA::PrivateKey* key);
         bool verify(CryptoPP::RSA::PublicKey* key);
 
-        void signOnCard(SmartCard* card);
+        bool signOnCard(SmartCard* card);
         bool verifyOnCard(SmartCard* card);
+
+        bool encryptOnCard(SmartCard* card);
+        bool decryptOnCard(SmartCard* card);
+
+        bool hmacOnCard(SmartCard* card);
+        bool verifyHMACOnCard(SmartCard* card);
     };
 
 }

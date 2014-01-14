@@ -202,7 +202,7 @@ namespace cdax {
         std::string ciphertext;
         CryptoPP::AutoSeededRandomPool prng;
 
-        CryptoPP::RSAES_OAEP_SHA_Encryptor encryptor(*key);
+        CryptoPP::RSAES_PKCS1v15_Encryptor encryptor(*key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
         CryptoPP::PK_EncryptorFilter *ef = new CryptoPP::PK_EncryptorFilter(prng, encryptor, ss);
         CryptoPP::StringSource(this->data.str(), true, ef);
@@ -221,7 +221,7 @@ namespace cdax {
         CryptoPP::AutoSeededRandomPool prng;
 
         try {
-            CryptoPP::RSAES_OAEP_SHA_Decryptor decryptor(*key);
+            CryptoPP::RSAES_PKCS1v15_Decryptor decryptor(*key);
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::PK_DecryptorFilter *df = new CryptoPP::PK_DecryptorFilter(prng, decryptor, ss);
             CryptoPP::StringSource(this->data.str(), true, df);
@@ -230,6 +230,8 @@ namespace cdax {
 
             return true;
         } catch(const CryptoPP::Exception& e) {
+
+            std::cout << e.what() << std::endl;
 
             return false;
         }
@@ -253,11 +255,50 @@ namespace cdax {
         this->signature = sig;
     }
 
-    void Message::signOnCard(SmartCard* card)
+    bool Message::signOnCard(SmartCard* card)
     {
         bytestring buffer = this->getPayloadData();
-        card->signMessage(buffer);
+        if (!card->sign(buffer)) {
+            return false;
+        }
         this->signature = buffer;
+
+        return true;
+    }
+
+    bool Message::verifyOnCard(SmartCard* card)
+    {
+        bytestring buffer = this->getPayloadData();
+        buffer.Assign(buffer + this->signature);
+        return card->verify(buffer);
+    }
+
+    bool Message::encryptOnCard(SmartCard* card)
+    {
+        return card->encrypt(this->data);
+    }
+
+    bool Message::decryptOnCard(SmartCard* card)
+    {
+        return card->decrypt(this->data);
+    }
+
+    bool Message::hmacOnCard(SmartCard* card)
+    {
+        bytestring buffer = this->getPayloadData();
+        if (!card->appendHMAC(buffer)) {
+            return false;
+        }
+        this->signature = buffer;
+
+        return true;
+    }
+
+    bool Message::verifyHMACOnCard(SmartCard* card)
+    {
+        bytestring buffer = this->getPayloadData();
+        buffer.Assign(buffer + this->signature);
+        return card->verifyHMAC(buffer);
     }
 
     /**
@@ -278,13 +319,6 @@ namespace cdax {
 
             return false;
         }
-    }
-
-    bool Message::verifyOnCard(SmartCard* card)
-    {
-        bytestring buffer = this->getPayloadData();
-        buffer.Assign(buffer + this->signature);
-        return card->verifyMessage(buffer);
     }
 
     /**
@@ -329,10 +363,10 @@ namespace cdax {
      */
     std::ostream &operator<< (std::ostream &out, const Message &msg)
     {
+        out << "message plain text: " << hex(msg.data);
+
         if (msg.iv.size() > 0) {
-            out << "message ciper text: " << hex(msg.data) << " iv: " << hex(msg.iv);
-        } else {
-            out << "message plain text: " << msg.data;
+            out << " iv: " << hex(msg.iv);
         }
 
         out << " topic: " << msg.topic << " source: " << msg.id;
