@@ -30,13 +30,13 @@ namespace cdax {
         bool selectApplet();
         std::string getError();
 
-        bool transmit(bytestring &updu);
+        bool transmit(byte instruction, bytestring &updu);
 
         bool storePrivateKey(CryptoPP::RSA::PrivateKey* privKey);
         bool connect();
         CryptoPP::RSA::PublicKey* initialize(CryptoPP::RSA::PublicKey* secServerPub);
 
-        bool storeKey(bytestring key);
+        bool storeKey(bytestring* key);
 
         bool sign(bytestring &msg);
         bool verify(bytestring &msg);

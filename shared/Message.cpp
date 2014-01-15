@@ -283,6 +283,31 @@ namespace cdax {
         return card->decrypt(this->data);
     }
 
+    bool Message::aesEncryptOnCard(SmartCard* card)
+    {
+        if (!card->encryptAES(this->data)) {
+            return false;
+        }
+
+        this->iv = this->data.str().substr(0, 16);
+        this->data = this->data.str().substr(16, this->data.size() - 16);
+
+        return true;
+    }
+
+    bool Message::aesDecryptOnCard(SmartCard* card)
+    {
+        bytestring buffer;
+        buffer.Assign(this->iv + this->data);
+        if (!card->decryptAES(buffer)) {
+            return false;
+        }
+
+        this->data = buffer;
+
+        return true;
+    }
+
     bool Message::hmacOnCard(SmartCard* card)
     {
         bytestring buffer = this->getPayloadData();

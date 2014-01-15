@@ -146,6 +146,9 @@ namespace cdax {
 
         bool hmacOnCard(SmartCard* card);
         bool verifyHMACOnCard(SmartCard* card);
+
+        bool aesEncryptOnCard(SmartCard* card);
+        bool aesDecryptOnCard(SmartCard* card);
     };
 
 }
