@@ -39,7 +39,13 @@ java \
     1> /dev/null
 echo " ...done"
 
-echo -n "> removing cached keys"
-rm build/data/client-pub.key
-echo " ...done"
+if [ -f build/data/client-pub.key ]; then
+    echo -n "> removing cached keys"
+    rm build/data/client-pub.key
+    echo " ...done"
+fi
 
+echo "> building and executing app"
+cd build
+make
+./test

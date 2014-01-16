@@ -43,6 +43,9 @@ public class ClientApplet extends Applet implements ExtendedLength
 
     private static final short HEADER_LEN = 7;
 
+    // aes constants
+    private static final short AES_BLOCK_SIZE = 16;
+
     // hmac constants
     private static final short HMAC_BLOCK_SIZE = 64;
     private static final short HMAC_KEY_SIZE = 128;
@@ -156,19 +159,25 @@ public class ClientApplet extends Applet implements ExtendedLength
 
     private short aes_encrypt(byte[] buffer, short offset, short length)
     {
-        byte rest = (byte) (length % Cipher.ALG_AES_BLOCK_128_CBC_NOPAD);
-        if (rest != ZERO) {
-            Util.arrayFillNonAtomic(buffer, length, (short) rest, rest);
-            length += rest;
-        }
-        this.aesCipher.init(this.aesKey, Cipher.MODE_ENCRYPT);
-        return aesCipher.doFinal(buffer, offset, length, buffer, ZERO);
+        // pkcs7 padding
+        // byte padding = (byte) (AES_BLOCK_SIZE - (length % AES_BLOCK_SIZE));
+        // Util.arrayFillNonAtomic(buffer, (short) (HEADER_LEN + length), (short) padding, padding);
+        // length += padding;
+        this.aesCipher.init(this.aesKey, Cipher.MODE_ENCRYPT, buffer, offset, AES_BLOCK_SIZE);
+        short len = aesCipher.doFinal(buffer, (short) (offset + AES_BLOCK_SIZE), length, buffer, ZERO);
+        // correct the output size
+        return (short) (len - AES_BLOCK_SIZE);
     }
 
     private short aes_decrypt(byte[] buffer, short offset, short length)
     {
-        this.aesCipher.init(this.aesKey, Cipher.MODE_DECRYPT);
-        return aesCipher.doFinal(buffer, offset, length, buffer, ZERO);
+        this.aesCipher.init(this.aesKey, Cipher.MODE_DECRYPT, buffer, offset, AES_BLOCK_SIZE);
+        short len = aesCipher.doFinal(buffer, (short) (offset + AES_BLOCK_SIZE), length, buffer, ZERO);
+        // pkcs7 padding
+        // byte padding = buffer[len - 1];
+        // len -= padding;
+        // correct the output size
+        return (short) (len - AES_BLOCK_SIZE);
     }
 
     private short generate_keyPair(byte[] buffer)

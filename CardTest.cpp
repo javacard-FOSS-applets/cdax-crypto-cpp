@@ -112,7 +112,7 @@ void signatuteTest()
 
     */
 
-    Message msg("test_id", "test_topic", "test_data");
+    Message msg("test_id", "test_topic", "topic_data");
     std::cout << msg;
 
     CryptoPP::AutoSeededRandomPool prng;
@@ -125,10 +125,20 @@ void signatuteTest()
         log("> stored key on card");
 
         msg.encrypt(key);
-        std::cout << "> data: " << msg.getData().hex() << std::endl;
+        log("> message encrypted");
+        std::cout << msg;
+
+        msg.aesDecryptOnCard(card);
+        log("> message decrypted on card");
+        std::cout << msg;
+
+        msg.aesEncryptOnCard(card);
+        log("> message encrypted on card");
+        std::cout << msg;
 
         msg.decrypt(key);
-        std::cout << "> data: " << msg.getData().hex() << std::endl;
+        log("> message decrypted");
+        std::cout << msg;
 
         /*
         msg.hmac(&key);

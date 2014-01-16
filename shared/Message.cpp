@@ -148,7 +148,7 @@ namespace cdax {
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(decrypt, ss);
             CryptoPP::StringSource(this->data.str(), true, enc);
-            this->iv.clear();
+            // this->iv.clear();
             this->data = plaintext;
 
             return true;
@@ -285,13 +285,27 @@ namespace cdax {
 
     bool Message::aesEncryptOnCard(SmartCard* card)
     {
-        if (!card->encryptAES(this->data)) {
-            return false;
+        // create fresh iv
+        // generateIV(CryptoPP::AES::BLOCKSIZE);
+
+        // add pkcs7 padding
+        size_t size = this->data.size();
+        size_t padding = CryptoPP::AES::BLOCKSIZE - (size % CryptoPP::AES::BLOCKSIZE);
+        this->data.resize(size + padding);
+        for (int i = size; i < size + padding; i++) {
+            this->data[i] = padding;
         }
 
-        this->iv = this->data.str().substr(0, 16);
-        this->data = this->data.str().substr(16, this->data.size() - 16);
+        bytestring buffer;
+        buffer.Assign(this->iv + this->data);
 
+        if (!card->encryptAES(buffer)) {
+            return false;
+        }
+        // this->data = this->data.str().substr(16, this->data.size() - 16);
+        // buffer.resize(size + padding);
+
+        this->data = buffer;
         return true;
     }
 
@@ -302,9 +316,9 @@ namespace cdax {
         if (!card->decryptAES(buffer)) {
             return false;
         }
-
+        // remove pkcs7 padding
+        buffer.resize(buffer.size() - buffer[buffer.size() - 1]);
         this->data = buffer;
-
         return true;
     }
 
