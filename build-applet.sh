@@ -44,8 +44,3 @@ if [ -f build/data/client-pub.key ]; then
     rm build/data/client-pub.key
     echo " ...done"
 fi
-
-echo "> building and executing app"
-cd build
-make
-./test

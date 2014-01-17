@@ -131,10 +131,10 @@ int main(int argc, char* argv[])
 {
     std::cout << "starting tests..." << std::endl << line << std::endl;
 
-    // testEncrypt();
-    // testHMAC();
+    testEncrypt();
+    testHMAC();
     testRSA();
-    // testSignCrypt();
+    testSignCrypt();
 
     return 0;
 }

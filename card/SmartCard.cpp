@@ -8,6 +8,11 @@ namespace cdax {
         return this->last_error;
     }
 
+    void SmartCard::setDebug(bool value)
+    {
+        this->debug = value;
+    }
+
     bool SmartCard::selectReader()
     {
         // get context
@@ -126,11 +131,30 @@ namespace cdax {
         return true;
     }
 
+    void SmartCard::startTimer()
+    {
+        this->timer = 0;
+        this->counter = 0;
+    }
 
-    bool SmartCard::transmit(byte instruction, bytestring &data)
+    int SmartCard::stopTimer()
+    {
+        std::cout
+            << " total: "
+            << this->timer
+            << " for: "
+            << this->counter
+            << " avarage: "
+            << (this->timer / this->counter)
+            << std::endl;
+
+        return this->timer / this->counter;
+    }
+
+    bool SmartCard::transmit(byte instruction, bytestring &data, byte p1, byte p2)
     {
         SCARD_IO_REQUEST pioRecvPci;
-        DWORD resp_buf_len = 1024;
+        DWORD resp_buf_len = 4096;
         byte* response_buffer = new byte[resp_buf_len];
 
         if (instruction != 0x00) {
@@ -139,8 +163,8 @@ namespace cdax {
             // class byte, instruction byte, length field encoded in 3 bytes
             header[0] = 0x80;
             header[1] = instruction;
-            header[2] = 0x00;
-            header[3] = 0x00;
+            header[2] = p1;
+            header[3] = p2;
             header[4] = 0x00;
             header[5] = (data.size() >> 8) & 0xff;
             header[6] = data.size() & 0xff;
@@ -148,7 +172,14 @@ namespace cdax {
             data.Assign(header + data);
         }
 
-        std::cout << "> send packet: " << data.hex() << std::endl;
+        if (this->debug) {
+            std::cout << "> send packet: " << data.hex() << std::endl;
+        }
+
+        struct timeval end;
+        struct timeval start;
+
+        gettimeofday(&start, NULL);
 
         LONG rv = SCardTransmit(
             this->card,
@@ -160,14 +191,25 @@ namespace cdax {
             &resp_buf_len
         );
 
+        double elapsed = 0.0;
+
+        gettimeofday(&end, NULL);
+        elapsed = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
+
+        this->timer += elapsed;
+        this->counter++;
+
         if (rv != SCARD_S_SUCCESS) {
             this->last_error = pcsc_stringify_error(rv);
             return false;
         }
 
         data.Assign(response_buffer, resp_buf_len);
+        delete response_buffer;
 
-        std::cout << "> receive packet: " << data.hex() << std::endl;
+        if (this->debug) {
+            std::cout << "> receive packet: " << data.hex() << std::endl;
+        }
 
         if (data[data.size() - 2] != 0x90 || data[data.size() - 1] != 0x00) {
             return false;
@@ -249,7 +291,7 @@ namespace cdax {
 
     bool SmartCard::encryptAES(bytestring &msg)
     {
-        return this->transmit(0x30, msg);
+        return this->transmit(0x30, msg, 0x00, 0x01);
     }
 
     bool SmartCard::decryptAES(bytestring &msg)

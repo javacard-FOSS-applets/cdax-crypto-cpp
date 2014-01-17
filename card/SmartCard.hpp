@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <ctime>
+#include <sys/time.h>
 
 #include <cryptopp/rsa.h>
 
@@ -24,13 +26,23 @@ namespace cdax {
         std::string last_error;
         char* reader;
 
+        bool debug = false;
+
+        double timer = 0;
+        double counter = 0;
+
         bool selectReader();
         bool waitForCard();
     public:
+        void startTimer();
+        int stopTimer();
+
         bool selectApplet();
         std::string getError();
 
-        bool transmit(byte instruction, bytestring &updu);
+        void setDebug(bool value);
+
+        bool transmit(byte instruction, bytestring &data, byte p1 = 0x00, byte p2 = 0x00);
 
         bool storePrivateKey(CryptoPP::RSA::PrivateKey* privKey);
         bool connect();

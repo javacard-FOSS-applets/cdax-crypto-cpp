@@ -285,9 +285,6 @@ namespace cdax {
 
     bool Message::aesEncryptOnCard(SmartCard* card)
     {
-        // create fresh iv
-        // generateIV(CryptoPP::AES::BLOCKSIZE);
-
         // add pkcs7 padding
         size_t size = this->data.size();
         size_t padding = CryptoPP::AES::BLOCKSIZE - (size % CryptoPP::AES::BLOCKSIZE);
@@ -296,16 +293,13 @@ namespace cdax {
             this->data[i] = padding;
         }
 
-        bytestring buffer;
-        buffer.Assign(this->iv + this->data);
-
-        if (!card->encryptAES(buffer)) {
+        if (!card->encryptAES(this->data)) {
             return false;
         }
-        // this->data = this->data.str().substr(16, this->data.size() - 16);
-        // buffer.resize(size + padding);
 
-        this->data = buffer;
+        this->iv =  this->data.str().substr(0, CryptoPP::AES::BLOCKSIZE);
+        this->data = this->data.str().substr(CryptoPP::AES::BLOCKSIZE, this->data.size() - CryptoPP::AES::BLOCKSIZE);
+
         return true;
     }
 

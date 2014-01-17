@@ -20,6 +20,7 @@ import javacard.security.RSAPrivateCrtKey;
 import javacard.security.RSAPublicKey;
 import javacard.security.CryptoException;
 import javacard.security.MessageDigest;
+import javacard.security.RandomData;
 
 
 public class ClientApplet extends Applet implements ExtendedLength
@@ -29,6 +30,7 @@ public class ClientApplet extends Applet implements ExtendedLength
     private static final byte GEN_KEYPAIR = (byte) 0x01;
     private static final byte STORE_MASTER = (byte) 0x02;
     private static final byte STORE_KEY = (byte) 0x03;
+    private static final byte TEST = (byte) 0x05;
     private static final byte RSA_SIGN = (byte) 0x10;
     private static final byte RSA_VERIFY = (byte) 0x11;
     private static final byte RSA_ENC = (byte) 0x12;
@@ -37,6 +39,9 @@ public class ClientApplet extends Applet implements ExtendedLength
     private static final byte HMAC_VERIFY = (byte) 0x21;
     private static final byte AES_ENC = (byte) 0x30;
     private static final byte AES_DEC = (byte) 0x31;
+
+    private static final byte TEST_SEND = (byte) 0x05;
+    private static final byte TEST_RECEIVE = (byte) 0x06;
 
     private static final short ZERO = 0;
     private static final short ONE = 1;
@@ -69,6 +74,8 @@ public class ClientApplet extends Applet implements ExtendedLength
     private Cipher rsaCipher;
     private Cipher aesCipher;
 
+    private RandomData random;
+
     public ClientApplet()
     {
         this.register();
@@ -78,6 +85,7 @@ public class ClientApplet extends Applet implements ExtendedLength
         this.keyPair = new KeyPair(KeyPair.ALG_RSA_CRT, KeyBuilder.LENGTH_RSA_2048);
         this.rsaCipher = Cipher.getInstance(Cipher.ALG_RSA_PKCS1, false);
         this.aesCipher = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
+        this.random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
     }
 
     public static void install(byte[] buffer, short offset, byte length)
@@ -97,13 +105,11 @@ public class ClientApplet extends Applet implements ExtendedLength
             }
         }
 
-        byte CLA = (byte) (buffer[ISO7816.OFFSET_CLA] & 0xFF);
-        byte INS = (byte) (buffer[ISO7816.OFFSET_INS] & 0xFF);
         byte P1  = (byte) (buffer[ISO7816.OFFSET_P1] & 0xFF);
         byte P2  = (byte) (buffer[ISO7816.OFFSET_P2] & 0xFF);
         byte LC  = (byte) (buffer[ISO7816.OFFSET_LC] & 0xFF);
 
-        if (CLA != CDAX_CLA) {
+        if (buffer[ISO7816.OFFSET_CLA] != CDAX_CLA) {
             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
         }
 
@@ -113,7 +119,7 @@ public class ClientApplet extends Applet implements ExtendedLength
             LEN = Util.getShort(buffer, (short) (ISO7816.OFFSET_LC + ONE));
         }
 
-        switch (INS) {
+        switch (buffer[ISO7816.OFFSET_INS] & 0xFF) {
             case GEN_KEYPAIR:
                 apdu.setOutgoingAndSend(ZERO, this.generate_keyPair(buffer));
                 break;
@@ -147,37 +153,65 @@ public class ClientApplet extends Applet implements ExtendedLength
                 apdu.setOutgoingAndSend(ZERO, ONE);
                 break;
             case AES_ENC:
-                apdu.setOutgoingAndSend(ZERO, this.aes_encrypt(buffer, HEADER_LEN, LEN));
+                apdu.setOutgoingAndSend(ZERO, this.aes_encrypt(buffer, HEADER_LEN, LEN, P1, P2));
                 break;
             case AES_DEC:
-                apdu.setOutgoingAndSend(ZERO, this.aes_decrypt(buffer, HEADER_LEN, LEN));
+                apdu.setOutgoingAndSend(ZERO, this.aes_decrypt(buffer, HEADER_LEN, LEN, P1, P2));
+                break;
+            case TEST_SEND:
+                apdu.setOutgoingAndSend(ZERO, ZERO);
+            case TEST_RECEIVE:
+                apdu.setOutgoingAndSend(ZERO, Util.getShort(buffer, ISO7816.OFFSET_P1));
                 break;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
         }
     }
 
-    private short aes_encrypt(byte[] buffer, short offset, short length)
+    private short aes_encrypt(byte[] buffer, short offset, short length, byte p1, byte p2)
     {
-        // pkcs7 padding
-        // byte padding = (byte) (AES_BLOCK_SIZE - (length % AES_BLOCK_SIZE));
-        // Util.arrayFillNonAtomic(buffer, (short) (HEADER_LEN + length), (short) padding, padding);
-        // length += padding;
-        this.aesCipher.init(this.aesKey, Cipher.MODE_ENCRYPT, buffer, offset, AES_BLOCK_SIZE);
-        short len = aesCipher.doFinal(buffer, (short) (offset + AES_BLOCK_SIZE), length, buffer, ZERO);
-        // correct the output size
-        return (short) (len - AES_BLOCK_SIZE);
+        short len;
+
+        if (p1 == 0x01) {
+            // add pkcs7 padding
+            byte padding = (byte) (AES_BLOCK_SIZE - (length % AES_BLOCK_SIZE));
+            Util.arrayFillNonAtomic(buffer, (short) (HEADER_LEN + length), (short) padding, padding);
+            length += padding;
+        }
+
+        if (p2 == 0x01) {
+            byte[] iv = JCSystem.makeTransientByteArray(AES_BLOCK_SIZE, JCSystem.CLEAR_ON_DESELECT);
+            this.random.generateData(iv, ZERO, AES_BLOCK_SIZE);
+            this.aesCipher.init(this.aesKey, Cipher.MODE_ENCRYPT, iv, ZERO, AES_BLOCK_SIZE);
+            len = aesCipher.doFinal(buffer, offset, length, buffer, AES_BLOCK_SIZE);
+            Util.arrayCopyNonAtomic(iv, ZERO, buffer, ZERO, AES_BLOCK_SIZE);
+            // correct output size
+            len += AES_BLOCK_SIZE;
+        } else {
+            this.aesCipher.init(this.aesKey, Cipher.MODE_ENCRYPT, buffer, offset, AES_BLOCK_SIZE);
+            len = aesCipher.doFinal(buffer, (short) (offset + AES_BLOCK_SIZE), length, buffer, ZERO);
+            // correct output size
+            len -= AES_BLOCK_SIZE;
+        }
+
+        return len;
     }
 
-    private short aes_decrypt(byte[] buffer, short offset, short length)
+    private short aes_decrypt(byte[] buffer, short offset, short length, byte p1, byte p2)
     {
         this.aesCipher.init(this.aesKey, Cipher.MODE_DECRYPT, buffer, offset, AES_BLOCK_SIZE);
         short len = aesCipher.doFinal(buffer, (short) (offset + AES_BLOCK_SIZE), length, buffer, ZERO);
-        // pkcs7 padding
-        // byte padding = buffer[len - 1];
-        // len -= padding;
-        // correct the output size
-        return (short) (len - AES_BLOCK_SIZE);
+
+        if (p1 == 0x01) {
+            // pkcs7 padding
+            byte padding = buffer[(short) (len - ONE)];
+            len -= padding;
+        }
+
+        // correct output size
+        len -= AES_BLOCK_SIZE;
+
+        return len;
     }
 
     private short generate_keyPair(byte[] buffer)

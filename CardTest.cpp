@@ -38,8 +38,6 @@ void signatuteTest()
     RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
 
-    /*
-
     // Generate RSA Parameters
 
     if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
@@ -110,11 +108,6 @@ void signatuteTest()
         std::cout << msg;
     }
 
-    */
-
-    Message msg("test_id", "test_topic", "topic_data");
-    std::cout << msg;
-
     CryptoPP::AutoSeededRandomPool prng;
     bytestring* key = new bytestring(16);
     prng.GenerateBlock(key->BytePtr(), key->size());
@@ -140,8 +133,7 @@ void signatuteTest()
         log("> message decrypted");
         std::cout << msg;
 
-        /*
-        msg.hmac(&key);
+        msg.hmac(key);
         std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
 
         if (msg.verifyHMACOnCard(card)) {
@@ -151,14 +143,11 @@ void signatuteTest()
         msg.hmacOnCard(card);
         std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
 
-        if (msg.verify(&key)) {
+        if (msg.verify(key)) {
             log("> messaged hmac verified");
         } else {
             log("> could not verify message hmac");
         }
-
-
-        */
     }
 
 }
