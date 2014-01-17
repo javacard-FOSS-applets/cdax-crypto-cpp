@@ -137,17 +137,8 @@ namespace cdax {
         this->counter = 0;
     }
 
-    int SmartCard::stopTimer()
+    double SmartCard::stopTimer()
     {
-        std::cout
-            << " total: "
-            << this->timer
-            << " for: "
-            << this->counter
-            << " avarage: "
-            << (this->timer / this->counter)
-            << std::endl;
-
         return this->timer / this->counter;
     }
 

@@ -35,7 +35,7 @@ namespace cdax {
         bool waitForCard();
     public:
         void startTimer();
-        int stopTimer();
+        double stopTimer();
 
         bool selectApplet();
         std::string getError();
