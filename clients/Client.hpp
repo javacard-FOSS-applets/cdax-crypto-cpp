@@ -15,20 +15,20 @@ namespace cdax {
     {
     protected:
         // list of topic names
-        std::vector<std::string> topics;
+        std::vector<bytestring> topics;
 
         // list of topic key pairs per topic name
-        boost::unordered_map<std::string, TopicKeyPair> topic_keys;
+        boost::unordered_map<bytestring, TopicKeyPair> topic_keys;
 
         // list of node ports per topic name
-        boost::unordered_map<std::string, std::string> topic_ports;
+        boost::unordered_map<bytestring, std::string> topic_ports;
 
         // smart card
         SmartCard *card = NULL;
 
     public:
-        void addTopic(std::string topic_name, std::string topic_port);
-        void setServer(CryptoPP::RSA::PublicKey key);
+        void addTopic(bytestring topic_name, std::string topic_port);
+        void setServer(CryptoPP::RSA::PublicKey *key);
     };
 
 }

@@ -11,9 +11,9 @@ namespace cdax {
     class Publisher : public Client
     {
     public:
-        Publisher(std::string identity, RSAKeyPair rsa_key_pair);
+        Publisher(bytestring identity, RSAKeyPair rsa_key_pair);
 
-        void publishMessage(std::string topic, std::string data);
+        void publishMessage(bytestring topic, bytestring data);
         void generateRandom();
     };
 

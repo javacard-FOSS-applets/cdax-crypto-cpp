@@ -121,6 +121,28 @@ void testSignCrypt()
     std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
+void testEncode()
+{
+    Message msg = Message("foo", "bar", "baz");
+
+    RSAKeyPair* keypair = generateKeyPair(512);
+    bytestring* key = generateKey(16);
+
+    msg.encrypt(keypair->getPublic());
+    msg.sign(keypair->getPrivate());
+    msg.encrypt(key);
+
+    std::cout << "Message:" << msg << std::endl;
+
+    std::string encoded = msg.encode();
+
+    std::cout << "Encoded:" << hex(encoded) << std::endl;
+
+    Message msg2 = Message(encoded);
+
+    std::cout << "Decoded:" << msg2 << std::endl;
+}
+
 /**
  * Eceute message unit tests
  * @param  argc ignored
@@ -135,6 +157,7 @@ int main(int argc, char* argv[])
     testHMAC();
     testRSA();
     testSignCrypt();
+    testEncode();
 
     return 0;
 }

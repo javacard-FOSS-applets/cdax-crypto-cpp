@@ -118,6 +118,22 @@ namespace cdax {
     }
 
     /**
+     * Construct a topic key pair from a string, the first
+     * TopicKeyPair::KeyLength bytes in the string are the
+     * encryption key the last TopicKeyPair::KeyLength bytes
+     * are used as the the authentication key.
+     * @param string key source
+     */
+    TopicKeyPair::TopicKeyPair(bytestring source)
+    {
+        int len = TopicKeyPair::KeyLength;
+        // first TopicKeyPair::KeyLength bytes are the encyption key
+        this->encryptionKey = source.str().substr(0, len);
+        // last TopicKeyPair::KeyLength bytes are the authentication key
+        this->authenticationKey = source.str().substr(len, len);
+    }
+
+    /**
      * Create a topic key pair from two bytestring values
      * @param bytestring enc_key encryption key
      * @param bytestring auth_key authentication key
@@ -126,6 +142,13 @@ namespace cdax {
     {
         this->encryptionKey = enc_key;
         this->authenticationKey = auth_key;
+    }
+
+    bytestring TopicKeyPair::getValue()
+    {
+        bytestring buffer;
+        buffer.Assign(this->encryptionKey + this->authenticationKey);
+        return buffer;
     }
 
     /**
@@ -182,7 +205,7 @@ namespace cdax {
         this->resize(0);
     }
 
-    const std::string bytestring::hex()
+    const std::string bytestring::hex() const
     {
         std::ostringstream ss;
         ss << '(' << this->size() << " byte) " << std::hex;
@@ -195,7 +218,7 @@ namespace cdax {
         return ss.str();
     }
 
-    const std::string bytestring::str()
+    const std::string bytestring::str() const
     {
         return std::string(this->begin(), this->end());
     }
@@ -209,6 +232,12 @@ namespace cdax {
     {
         out << std::string(data.m_ptr, data.m_ptr + data.m_size);
         return out;
+    }
+
+    std::size_t hash_value(bytestring const& b)
+    {
+        boost::hash<std::string> hasher;
+        return hasher(b.str());
     }
 
     /**

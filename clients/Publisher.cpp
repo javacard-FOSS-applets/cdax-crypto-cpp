@@ -8,36 +8,16 @@ namespace cdax {
      * @param string identity
      * @param RSAKeyPair rsa_key_pair
      */
-    Publisher::Publisher(std::string identity, RSAKeyPair rsa_key_pair)
+    Publisher::Publisher(bytestring identity, RSAKeyPair rsa_key_pair)
     {
         this->id = identity;
         this->key_pair = rsa_key_pair;
 
         // terminal log color
         this->color = BLUE;
-
-        // connect to private smart card
-        this->card = new SmartCard();
-
-        this->log("is connecting to smart card...");
-
-        if (!card->selectReader()) {
-            this->log(card->getError());
-            return;
-        }
-
-        if (!card->waitForCard()) {
-            this->log(card->getError());
-            return;
-        }
-
-        if (!card->storePrivateKey(this->key_pair.getPrivate())) {
-            this->log(card->getError());
-            return;
-        }
     }
 
-    void Publisher::publishMessage(std::string topic, std::string data)
+    void Publisher::publishMessage(bytestring topic, bytestring data)
     {
         // create random topic data message
         Message msg(this->id, topic, data);
@@ -69,8 +49,8 @@ namespace cdax {
                 continue;
             }
 
-            std::string random_topic = this->topics[rand() % this->topics.size()];
-            std::string random_data = randomString(8);
+            bytestring random_topic = this->topics[rand() % this->topics.size()];
+            bytestring random_data = randomString(8);
 
             this->publishMessage(random_topic, random_data);
         }

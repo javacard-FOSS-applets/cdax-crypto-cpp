@@ -8,7 +8,7 @@ namespace cdax {
      * @param string topic_name
      * @param string port_number port number of the node
      */
-    void Client::addTopic(std::string topic_name, std::string port_number)
+    void Client::addTopic(bytestring topic_name, std::string port_number)
     {
         this->topics.push_back(topic_name);
         this->topic_ports[topic_name] = port_number;
@@ -28,7 +28,7 @@ namespace cdax {
             this->log("signed on card:", request);
         }
 
-        this->log("sent topic join request for " + topic_name);
+        this->log("sent topic join request for " + topic_name.str());
 
         Message response = send(request, port_number);
 
@@ -50,12 +50,12 @@ namespace cdax {
 
         if (response.getData().size() == 0) {
 
-            this->log("received an empty topic join response for " + topic_name);
+            this->log("received an empty topic join response for " + topic_name.str());
 
             return;
         }
 
-        this->log("received topic keys for " + topic_name);
+        this->log("received topic keys for " + topic_name.str());
 
         // store the topic keypair
         TopicKeyPair topic_key_pair(response.getData());
@@ -66,7 +66,7 @@ namespace cdax {
      * Set security server public key to verify topic join reponses
      * @param CryptoPP::RSA::PublicKey key security server public key
      */
-    void Client::setServer(CryptoPP::RSA::PublicKey key)
+    void Client::setServer(CryptoPP::RSA::PublicKey *key)
     {
         this->sec_server_key = key;
     }

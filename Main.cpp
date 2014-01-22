@@ -105,7 +105,8 @@ void simple()
  */
 int main(int argc, char* argv[])
 {
-    simple();
+    advanced();
+    // simple();
 
     return 0;
 }

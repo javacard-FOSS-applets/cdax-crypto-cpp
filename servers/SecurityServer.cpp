@@ -8,7 +8,7 @@ namespace cdax {
      * @param string identity
      * @param string port_number
      */
-    SecurityServer::SecurityServer(std::string identity, std::string port_number)
+    SecurityServer::SecurityServer(bytestring identity, std::string port_number)
     {
         this->id = identity;
         this->port = port_number;
@@ -30,7 +30,8 @@ namespace cdax {
     Message SecurityServer::handle(Message msg)
     {
         // security server only handles topic join requests
-        if (msg.getData().compare("topic_join") != 0) {
+        bytestring join = "topic_join";
+        if (msg.getData() != join) {
 
             this->log("received unknown request:", msg);
 
@@ -38,7 +39,7 @@ namespace cdax {
         }
 
         // public key of topic key requester
-        CryptoPP::RSA::PublicKey pub_key;
+        CryptoPP::RSA::PublicKey *pub_key;
 
         // select the public key of a client or node
         if (this->clients.count(msg.getId())) {
@@ -65,16 +66,16 @@ namespace cdax {
 
         // now permissions of the node or lient should be checked
 
-        std::string data;
+        bytestring data;
 
         if (this->clients.count(msg.getId())) {
 
             // encode topic key pair for client
-            data = this->topics[msg.getTopic()].toString();
+            data = this->topics[msg.getTopic()].getValue();
         } else {
 
             // encode hmac key for node
-            data = secToString(this->topics[msg.getTopic()].getAuthKey());
+            data = *this->topics[msg.getTopic()].getAuthKey();
         }
 
         Message response(this->id, msg.getTopic(), data);
@@ -85,7 +86,7 @@ namespace cdax {
         // sign with security server private key
         response.sign(this->key_pair.getPrivate());
 
-        this->log("sent topic keys for topic " + msg.getTopic() + " to " + msg.getId());
+        this->log("sent topic keys for topic " + msg.getTopic().str() + " to " + msg.getId().str());
 
         return response;
     }
@@ -93,12 +94,12 @@ namespace cdax {
     /**
      * Generate a AES or HMAC key
      * @param  int length key length
-     * @return CryptoPP::SecByteBlock the generated key
+     * @return bytestring the generated key
      */
-    CryptoPP::SecByteBlock SecurityServer::generateKey(size_t length)
+    bytestring SecurityServer::generateKey(size_t length)
     {
         // Pseudo Random Number Generator
-        CryptoPP::SecByteBlock key(length);
+        bytestring key(length);
         prng.GenerateBlock(key, key.size());
         return key;
     }
@@ -123,7 +124,7 @@ namespace cdax {
      * Add a new topic and generate the topic keys
      * @param string topic_name name of the topic
      */
-    void SecurityServer::addTopic(std::string topic_name)
+    void SecurityServer::addTopic(bytestring topic_name)
     {
         TopicKeyPair topic_key_pair(
             this->generateKey(TopicKeyPair::KeyLength),
@@ -138,7 +139,7 @@ namespace cdax {
      * @param  string port the port number of the node
      * @return Node
      */
-    Node SecurityServer::addNode(std::string node_name, std::string port)
+    Node SecurityServer::addNode(bytestring node_name, std::string port)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
         this->nodes[node_name] = rsa_key_pair.getPublic();
@@ -155,7 +156,7 @@ namespace cdax {
      * @param  string port the port number of the subscriber
      * @return Subscriber
      */
-    Subscriber SecurityServer::addSubscriber(std::string client_name, std::string port)
+    Subscriber SecurityServer::addSubscriber(bytestring client_name, std::string port)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
         this->clients[client_name] = rsa_key_pair.getPublic();
@@ -170,7 +171,7 @@ namespace cdax {
      * @param  string node_name name of the publisher
      * @return Publisher
      */
-    Publisher SecurityServer::addPublisher(std::string client_name)
+    Publisher SecurityServer::addPublisher(bytestring client_name)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
         this->clients[client_name] = rsa_key_pair.getPublic();

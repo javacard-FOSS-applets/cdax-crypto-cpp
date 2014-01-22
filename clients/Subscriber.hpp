@@ -14,7 +14,7 @@ namespace cdax {
         Message handle(Message request);
 
     public:
-        Subscriber(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair);
+        Subscriber(bytestring identity, std::string port_number, RSAKeyPair rsa_key_pair);
     };
 
 }

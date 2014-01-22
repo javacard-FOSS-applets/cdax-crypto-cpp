@@ -26,6 +26,64 @@ namespace cdax {
         this->data = topic_data;
     }
 
+    void Message::decode(std::string encoded)
+    {
+        size_t offset = 5;
+
+        // decode fields based on length in header
+        this->id = encoded.substr(offset, encoded[0]);
+        this->topic = encoded.substr(offset += encoded[0] & 0xFF, encoded[1]);
+        this->iv = encoded.substr(offset += encoded[1] & 0xFF, encoded[2]);
+        // convert unsigned 64 bit integer from byte array to timestamp
+        offset += encoded[2] & 0xFF;
+        for (int i = 0; i < encoded[3]; i++) {
+            this->timestamp = (this->timestamp << 8) | (encoded[offset + i] & 0xFF);
+        }
+        this->signature = encoded.substr(offset += encoded[3] & 0xFF, encoded[4] & 0xFF);
+
+        // rest of the string is data
+        offset += encoded[4] & 0xFF;
+        this->data = encoded.substr(offset, encoded.size() - offset);
+    }
+
+    const std::string Message::encode(bool all) const
+    {
+        bytestring buffer(5);
+
+        // create header with field lengths
+        buffer[0] = this->id.size();
+        buffer[1] = this->topic.size();
+        buffer[2] = this->iv.size();
+        size_t time_len = sizeof(this->timestamp);
+        buffer[3] = time_len;
+
+        if (all) {
+            buffer[4] = this->signature.size();
+        } else {
+            buffer[4] = 0x00;
+        }
+
+        // assign fields
+        buffer += this->id;
+        buffer += this->topic;
+        buffer += this->iv;
+
+        // convert timestamp (64 bit uint) to byte array
+        size_t offset = buffer.size();
+        buffer.CleanGrow(offset + time_len);
+        for (int i = 0; i < time_len; i++) {
+            buffer[offset + time_len - 1 - i] = (this->timestamp >> (i * 8)) & 0xFF;
+        }
+
+        if (all) {
+            // assign message data
+            buffer += this->signature;
+            buffer += this->data;
+        }
+
+        return buffer.str();
+    }
+
     /**
      * Set the name of the sender
      * @param string identity
@@ -169,7 +227,7 @@ namespace cdax {
         CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::HashFilter *hf = new CryptoPP::HashFilter(hmac, ss);
-        CryptoPP::StringSource(this->getPayloadData(), true, hf);
+        CryptoPP::StringSource(this->encode(false), true, hf);
         this->signature = sig;
     }
 
@@ -184,7 +242,7 @@ namespace cdax {
             CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
             const int flags = CryptoPP::HashVerificationFilter::THROW_EXCEPTION | CryptoPP::HashVerificationFilter::HASH_AT_END;
             CryptoPP::HashVerificationFilter *hvf = new CryptoPP::HashVerificationFilter(hmac, NULL, flags);
-            CryptoPP::StringSource(this->getPayloadData() + this->signature.str(), true, hvf);
+            CryptoPP::StringSource(this->encode(false) + this->signature.str(), true, hvf);
 
             return true;
         } catch(const CryptoPP::Exception& e) {
@@ -250,14 +308,34 @@ namespace cdax {
         CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(*key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
-        CryptoPP::StringSource(this->getPayloadData(), true, sf);
+        CryptoPP::StringSource(this->encode(false), true, sf);
 
         this->signature = sig;
     }
 
+    /**
+     * Verify the message using the RSA signature value  with RSA PKCS1v1.5 SHA
+     * @param  CryptoPP::RSA::PublicKey key the RSA public key
+     * @return bool true if verification was successful
+     */
+    bool Message::verify(CryptoPP::RSA::PublicKey* key)
+    {
+        try {
+            CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(*key);
+            const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
+            CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
+            CryptoPP::StringSource(this->encode(false) + this->signature.str(), true, svf);
+
+            return true;
+        } catch(const CryptoPP::Exception& e) {
+
+            return false;
+        }
+    }
+
     bool Message::signOnCard(SmartCard* card)
     {
-        bytestring buffer = this->getPayloadData();
+        bytestring buffer = this->encode(false);
         if (!card->sign(buffer)) {
             return false;
         }
@@ -268,7 +346,7 @@ namespace cdax {
 
     bool Message::verifyOnCard(SmartCard* card)
     {
-        bytestring buffer = this->getPayloadData();
+        bytestring buffer = this->encode(false);
         buffer.Assign(buffer + this->signature);
         return card->verify(buffer);
     }
@@ -318,7 +396,7 @@ namespace cdax {
 
     bool Message::hmacOnCard(SmartCard* card)
     {
-        bytestring buffer = this->getPayloadData();
+        bytestring buffer = this->encode(false);
         if (!card->appendHMAC(buffer)) {
             return false;
         }
@@ -329,29 +407,9 @@ namespace cdax {
 
     bool Message::verifyHMACOnCard(SmartCard* card)
     {
-        bytestring buffer = this->getPayloadData();
+        bytestring buffer = this->encode(false);
         buffer.Assign(buffer + this->signature);
         return card->verifyHMAC(buffer);
-    }
-
-    /**
-     * Verify the message using the RSA signature value  with RSA PKCS1v1.5 SHA
-     * @param  CryptoPP::RSA::PublicKey key the RSA public key
-     * @return bool true if verification was successful
-     */
-    bool Message::verify(CryptoPP::RSA::PublicKey* key)
-    {
-        try {
-            CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(*key);
-            const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
-            CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
-            CryptoPP::StringSource(this->getPayloadData() + this->signature.str(), true, svf);
-
-            return true;
-        } catch(const CryptoPP::Exception& e) {
-
-            return false;
-        }
     }
 
     /**
@@ -367,43 +425,21 @@ namespace cdax {
     }
 
     /**
-     * Concatenate the message payload data (the sender id, message timestamp,
-     * topic name, topic data and possibly the encryption IV)
-     * and return the resulting string for signing purposes
-     * @return string payload
-     */
-    std::string Message::getPayloadData()
-    {
-        std::stringstream ss;
-
-        ss << this->id;
-        ss << this->topic;
-        ss << this->data;
-
-        std::string tmp_timestamp = boost::lexical_cast<std::string>(this->timestamp);
-        ss << tmp_timestamp;
-
-        std::string tmp_iv = std::string(this->iv.begin(), this->iv.end());
-        ss << tmp_iv;
-
-        return ss.str();
-    }
-
-    /**
      * Overload << operator, to format the content of a message
      * in an output stream. Shows the message data, sender id,
      * topic name and message timestamp
      */
     std::ostream &operator<< (std::ostream &out, const Message &msg)
     {
-        out << "message plain text: " << hex(msg.data);
+        out << "data: " << hex(msg.data) << std::endl;
 
         if (msg.iv.size() > 0) {
-            out << " iv: " << hex(msg.iv);
+            out << "iv: " << hex(msg.iv) << std::endl;
         }
 
-        out << " topic: " << msg.topic << " source: " << msg.id;
-        out << " " << std::ctime(&msg.timestamp);
+        out << "topic: " << msg.topic << std::endl;
+        out << "source: " << msg.id << std::endl;
+        out << "time: " << std::ctime(&msg.timestamp);
 
         if (msg.signature.size() > 0) {
             out << "mac/signature: " << hex(msg.signature) << std::endl;

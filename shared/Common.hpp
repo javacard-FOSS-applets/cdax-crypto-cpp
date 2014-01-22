@@ -7,11 +7,12 @@
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <cryptopp/files.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/queue.h>
 #include <cryptopp/rsa.h>
-#include <cryptopp/files.h>
 
 #define RED      "\033[22;31m"
 #define GREEN    "\033[22;32m"
@@ -30,15 +31,15 @@ namespace cdax {
     public:
         bytestring(size_t size = 0) : CryptoPP::SecByteBlock(size) {};
 
-
         bytestring(std::string source);
         bytestring(const char* source);
-        const std::string hex();
-        const std::string str();
+        const std::string hex() const;
+        const std::string str() const;
 
         void clear();
     };
 
+    std::size_t hash_value(bytestring const& b);
 
     /**
      * Container class of a RSA keypair, holds the default keylength
@@ -87,10 +88,12 @@ namespace cdax {
 
         TopicKeyPair();
         TopicKeyPair(std::string source);
+        TopicKeyPair(bytestring source);
         TopicKeyPair(bytestring enc_key, bytestring auth_key);
 
         bytestring* getEncKey();
         bytestring* getAuthKey();
+        bytestring getValue();
 
         std::string toString();
     };

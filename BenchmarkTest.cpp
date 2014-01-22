@@ -28,15 +28,15 @@ void throughputBenchmark()
     }
 
     bytestring data;
-    int len, repeat = 10;
+    int len, repeat = 10, max = 25;
     byte p1, p2;
 
     std::cout << "Sending:" << std::endl;
 
-    for (int i = 0; i <= 25; i++) {
+    for (int i = 0; i <= max; i++) {
         len = 50 * i;
         card->startTimer();
-        for (int j = 0; j < repeat; j++) {
+        for (int j = 0; j <= repeat; j++) {
             data.resize(len);
             card->transmit(0x05, data);
         }
@@ -45,10 +45,10 @@ void throughputBenchmark()
 
     std::cout << "Receiving:" << std::endl;
 
-    for (int i = 0; i <= 25; i++) {
+    for (int i = 0; i <= max; i++) {
         len = 50 * i;
         card->startTimer();
-        for (int j = 0; j < repeat; j++) {
+        for (int j = 0; j <= repeat; j++) {
             data.resize(0);
             p1 = (len >> 8) & 0xff;
             p2 = len & 0xff;
@@ -59,10 +59,10 @@ void throughputBenchmark()
 
     std::cout << "Tranceiving:" << std::endl;
 
-    for (int i = 0; i <= 25; i++) {
+    for (int i = 0; i <= max; i++) {
         len = 50 * i;
         card->startTimer();
-        for (int j = 0; j < repeat; j++) {
+        for (int j = 0; j <= repeat; j++) {
             data.resize(len);
             p1 = (len >> 8) & 0xff;
             p2 = len & 0xff;
@@ -267,9 +267,9 @@ void rsaBenchmark()
  */
 int main(int argc, char* argv[])
 {
-    // throughputBenchmark();
+    throughputBenchmark();
     // cryptoBenchmark();
-    rsaBenchmark();
+    // rsaBenchmark();
 
     return 0;
 }

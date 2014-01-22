@@ -10,7 +10,7 @@ namespace cdax {
      * @param string port_number port number as string
      * @param string rsa_key_pair
      */
-    Subscriber::Subscriber(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair)
+    Subscriber::Subscriber(bytestring identity, std::string port_number, RSAKeyPair rsa_key_pair)
     {
         this->id = identity;
         this->port = port_number;

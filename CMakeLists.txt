@@ -12,7 +12,6 @@ add_definitions(
 )
 
 # boost and cryptopp
-
 find_package( Boost COMPONENTS system thread serialization REQUIRED )
 find_package( PCSCLite REQUIRED )
 find_package( CryptoPP REQUIRED )
@@ -30,18 +29,18 @@ set( LIBS ${LIBS} ${Boost_LIBRARIES} ${PCSCLITE_LIBRARY} ${CRYPTOPP_LIBRARIES} )
 # )
 # target_link_libraries( card_test ${LIBS} )
 
-# add_executable( simulator Main
-#     clients/Subscriber
-#     clients/Publisher
-#     clients/Client
-#     card/SmartCard
-#     servers/SecurityServer
-#     servers/Node
-#     shared/Host
-#     shared/Message
-#     shared/Common
-# )
-# target_link_libraries( simulator ${LIBS} )
+add_executable( simulator Main
+    clients/Subscriber
+    clients/Publisher
+    clients/Client
+    card/SmartCard
+    servers/SecurityServer
+    servers/Node
+    shared/Host
+    shared/Message
+    shared/Common
+)
+target_link_libraries( simulator ${LIBS} )
 
 # add_executable( msg_test MessageTest
 #     card/SmartCard
@@ -50,10 +49,10 @@ set( LIBS ${LIBS} ${Boost_LIBRARIES} ${PCSCLITE_LIBRARY} ${CRYPTOPP_LIBRARIES} )
 # )
 # target_link_libraries( msg_test ${LIBS} )
 
-add_executable( benchmark_test BenchmarkTest
-    card/SmartCard
-    shared/Message
-    shared/Common
-)
-target_link_libraries( benchmark_test ${LIBS} )
+# add_executable( benchmark_test BenchmarkTest
+#     card/SmartCard
+#     shared/Message
+#     shared/Common
+# )
+# target_link_libraries( benchmark_test ${LIBS} )
 

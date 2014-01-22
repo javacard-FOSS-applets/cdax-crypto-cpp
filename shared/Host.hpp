@@ -28,7 +28,7 @@ namespace cdax {
 
     protected:
         // host identity string
-        std::string id;
+        bytestring id;
 
         // host RSA keypair
         RSAKeyPair key_pair;
@@ -43,7 +43,7 @@ namespace cdax {
         std::string port;
 
         // security server public key
-        CryptoPP::RSA::PublicKey sec_server_key;
+        CryptoPP::RSA::PublicKey *sec_server_key;
 
         // TCP utility functions
         virtual Message handle(Message request);
@@ -59,7 +59,7 @@ namespace cdax {
     public:
         virtual void serve();
         virtual std::string getPort();
-        virtual std::string getId();
+        virtual bytestring getId();
 
     };
 

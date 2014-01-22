@@ -10,7 +10,7 @@ namespace cdax {
      * Get the host identity as string
      * @return string identity
      */
-    std::string Host::getId()
+    bytestring Host::getId()
     {
         return this->id;
     }
@@ -52,6 +52,7 @@ namespace cdax {
 
             Message response = this->handle(request);
             boost::archive::text_oarchive oa(stream);
+
             oa << response;
         }
     }

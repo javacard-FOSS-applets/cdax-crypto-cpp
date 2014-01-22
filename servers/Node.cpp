@@ -10,7 +10,7 @@ namespace cdax {
      * @param string port_number
      * @param string rsa_key_pair
      */
-    Node::Node(std::string identity, std::string port_number, RSAKeyPair rsa_key_pair)
+    Node::Node(bytestring identity, std::string port_number, RSAKeyPair rsa_key_pair)
     {
         this->id = identity;
         this->port = port_number;
@@ -25,7 +25,7 @@ namespace cdax {
      * Requests a topic key from the security server
      * @param string topic_name
      */
-    void Node::addTopic(std::string topic_name)
+    void Node::addTopic(bytestring topic_name)
     {
         // create topic join request Message
         Message request(this->id, topic_name, "topic_join");
@@ -33,7 +33,7 @@ namespace cdax {
         // sign request with private key
         request.sign(this->key_pair.getPrivate());
 
-        this->log("sent topic join request for " + topic_name);
+        this->log("sent topic join request for " + topic_name.str());
 
         Message response = send(request, this->sec_server_port);
 
@@ -54,14 +54,14 @@ namespace cdax {
         }
 
         // store topic key
-        this->topic_keys[topic_name] = stringToSec(response.getData());
+        this->topic_keys[topic_name] = response.getData();
     }
 
     /**
      * Set the list of clients and their respective public keys
      * @param client_keys
      */
-    void Node::setClients(boost::unordered_map<std::string, CryptoPP::RSA::PublicKey> client_keys)
+    void Node::setClients(boost::unordered_map<bytestring, CryptoPP::RSA::PublicKey*> client_keys)
     {
         this->clients = client_keys;
     }
@@ -71,7 +71,7 @@ namespace cdax {
      * @param string port
      * @param string server_public_key
      */
-    void Node::setServer(std::string port, CryptoPP::RSA::PublicKey server_public_key)
+    void Node::setServer(std::string port, CryptoPP::RSA::PublicKey *server_public_key)
     {
         this->sec_server_port = port;
         this->sec_server_key = server_public_key;
@@ -83,7 +83,7 @@ namespace cdax {
      * @param string sub_name subscriber name
      * @param string sub_port subscriber port number
      */
-    void Node::addSubscriber(std::string topic_name, std::string sub_name, std::string sub_port)
+    void Node::addSubscriber(bytestring topic_name, bytestring sub_name, std::string sub_port)
     {
         this->subscribers[topic_name].push_back(sub_name);
         this->sub_ports[sub_name] = sub_port;
@@ -100,7 +100,8 @@ namespace cdax {
      */
     Message Node::handle(Message msg)
     {
-        if (msg.getData().compare("topic_join") == 0) {
+        bytestring join = "topic_join";
+        if (msg.getData() == join) {
 
             // verify topic join request
             if (!msg.verify(this->clients[msg.getId()])) {
@@ -115,7 +116,7 @@ namespace cdax {
                 this->addTopic(msg.getTopic());
             }
 
-            this->log("forwarded topic join request of " + msg.getId());
+            this->log("forwarded topic join request of " + msg.getId().str());
 
             Message response = send(msg, this->sec_server_port);
 
@@ -145,14 +146,14 @@ namespace cdax {
 
             if (topic_keys.count(msg.getTopic()) == 0) {
 
-                this->log("could not obtian topic key for " + msg.getTopic());
+                this->log("could not obtian topic key for " + msg.getTopic().str());
 
                 return Message();
             }
         }
 
         // verify topic data HMAC
-        if (!msg.verify(this->topic_keys[msg.getTopic()])) {
+        if (!msg.verify(&this->topic_keys[msg.getTopic()])) {
 
             this->log("could not verify:", msg);
 
@@ -160,12 +161,12 @@ namespace cdax {
         }
 
         // load list of subscribers
-        std::vector<std::string> subs = subscribers[msg.getTopic()];
+        std::vector<bytestring> subs = subscribers[msg.getTopic()];
 
         this->log("forwarded to " + boost::lexical_cast<std::string>(subs.size()) + " subscribers");
 
         // forward message
-        for (std::vector<std::string>::size_type i = 0; i < subs.size(); ++i) {
+        for (std::vector<bytestring>::size_type i = 0; i < subs.size(); ++i) {
             send(msg, this->sub_ports[subs[i]]);
         }
 
