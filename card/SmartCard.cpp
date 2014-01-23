@@ -211,6 +211,11 @@ namespace cdax {
         return true;
     }
 
+    bool SmartCard::storeTopicKey(bytestring* key)
+    {
+        return this->transmit(0x03, *key);
+    }
+
     bool SmartCard::storePrivateKey(CryptoPP::RSA::PrivateKey* privKey)
     {
         size_t p_len = privKey->GetPrime1().MinEncodedSize();
@@ -235,60 +240,6 @@ namespace cdax {
         offset = offset + dq1_len;
 
         return this->transmit(0x01, data);
-    }
-
-    bool SmartCard::storeKey(bytestring* key)
-    {
-        return this->transmit(0x03, *key);
-    }
-
-    bool SmartCard::sign(bytestring &msg)
-    {
-        return this->transmit(0x10, msg);
-    }
-
-    bool SmartCard::encrypt(bytestring &msg)
-    {
-        return this->transmit(0x12, msg);
-    }
-
-    bool SmartCard::decrypt(bytestring &msg)
-    {
-        return this->transmit(0x13, msg);
-    }
-
-    bool SmartCard::verify(bytestring &msg)
-    {
-        if(!this->transmit(0x11, msg)) {
-            return false;
-        }
-
-        return (msg[0] == 0);
-    }
-
-    bool SmartCard::appendHMAC(bytestring &msg)
-    {
-        return this->transmit(0x20, msg);
-    }
-
-    bool SmartCard::verifyHMAC(bytestring &msg)
-    {
-        if(!this->transmit(0x21, msg)) {
-            return false;
-        }
-
-        return (msg[0] == 0);
-    }
-
-    bool SmartCard::encryptAES(bytestring &msg)
-    {
-        return this->transmit(0x30, msg, 0x00, 0x01);
-    }
-
-    bool SmartCard::decryptAES(bytestring &msg)
-    {
-
-        return this->transmit(0x31, msg);
     }
 
     bool SmartCard::selectApplet()
@@ -343,6 +294,55 @@ namespace cdax {
         }
 
         return clientPubKey;
+    }
+
+    bool SmartCard::sign(bytestring &msg)
+    {
+        return this->transmit(0x10, msg);
+    }
+
+    bool SmartCard::encrypt(bytestring &msg)
+    {
+        return this->transmit(0x12, msg);
+    }
+
+    bool SmartCard::decrypt(bytestring &msg)
+    {
+        return this->transmit(0x13, msg);
+    }
+
+    bool SmartCard::verify(bytestring &msg)
+    {
+        if(!this->transmit(0x11, msg)) {
+            return false;
+        }
+
+        return (msg[0] == 0);
+    }
+
+    bool SmartCard::hmac(bytestring &msg)
+    {
+        return this->transmit(0x20, msg);
+    }
+
+    bool SmartCard::hmacVerify(bytestring &msg)
+    {
+        if(!this->transmit(0x21, msg)) {
+            return false;
+        }
+
+        return (msg[0] == 0);
+    }
+
+    bool SmartCard::aesEncrypt(bytestring &msg)
+    {
+        return this->transmit(0x30, msg, 0x00, 0x01);
+    }
+
+    bool SmartCard::aesDecrypt(bytestring &msg)
+    {
+
+        return this->transmit(0x31, msg);
     }
 
 };

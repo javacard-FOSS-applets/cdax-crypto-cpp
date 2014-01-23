@@ -28,15 +28,15 @@ namespace cdax {
     Message Subscriber::handle(Message msg)
     {
         // verify with the node topic key
-        if (!msg.verify(this->topic_keys[msg.getTopic()].getAuthKey())) {
+        if (!msg.hmacVerify(this->topic_keys[msg.getTopic()].getAuthKey())) {
 
             this->log("could not verify:", msg);
 
             return Message();
         }
 
-        // AES decrypt and verify hmac with end-to-end topic key
-        if (!msg.verifyAndDecrypt(this->topic_keys[msg.getTopic()].getEncKey())) {
+        // AES decrypt with end-to-end topic key
+        if (!msg.aesDecrypt(this->topic_keys[msg.getTopic()].getEncKey())) {
 
             this->log("could not decrypt and verify:", msg);
 

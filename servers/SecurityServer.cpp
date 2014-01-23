@@ -139,13 +139,13 @@ namespace cdax {
      * @param  string port the port number of the node
      * @return Node
      */
-    Node SecurityServer::addNode(bytestring node_name, std::string port)
+    Node* SecurityServer::addNode(bytestring node_name, std::string port)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
         this->nodes[node_name] = rsa_key_pair.getPublic();
-        Node node(node_name, port, rsa_key_pair);
-        node.setClients(clients);
-        node.setServer(this->getPort(), this->key_pair.getPublic());
+        Node *node = new Node(node_name, port, rsa_key_pair);
+        node->setClients(clients);
+        node->setServer(this->getPort(), this->key_pair.getPublic());
 
         return node;
     }
@@ -156,31 +156,49 @@ namespace cdax {
      * @param  string port the port number of the subscriber
      * @return Subscriber
      */
-    Subscriber SecurityServer::addSubscriber(bytestring client_name, std::string port)
+    Subscriber* SecurityServer::addSubscriber(bytestring client_name, std::string port)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
         this->clients[client_name] = rsa_key_pair.getPublic();
-        Subscriber sub(client_name, port, rsa_key_pair);
-        sub.setServer(this->key_pair.getPublic());
+        Subscriber *sub = new Subscriber(client_name, port, rsa_key_pair);
+        sub->setServer(this->key_pair.getPublic());
 
         return sub;
     }
 
     /**
-     * Construct a new publisher, generate a keypairt and set the required attributes
+     * Construct a new publisher, generate a keypair and set the required attributes
      * @param  string node_name name of the publisher
      * @return Publisher
      */
-    Publisher SecurityServer::addPublisher(bytestring client_name)
+    Publisher* SecurityServer::addPublisher(bytestring client_name)
     {
         RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
         this->clients[client_name] = rsa_key_pair.getPublic();
-        Publisher pub(client_name, rsa_key_pair);
-        pub.setServer(this->key_pair.getPublic());
+        Publisher *pub = new Publisher(client_name, rsa_key_pair);
+        pub->setServer(this->key_pair.getPublic());
 
         return pub;
     }
 
+    /**
+     * Construct a new publisher, generate a keypairt on a smart card and set the required attributes
+     * @param  string node_name name of the publisher
+     * @return Publisher
+     */
+    Publisher* SecurityServer::addPublisher(bytestring client_name, SmartCard *card)
+    {
+        if (!card->connect()) {
+            throw new CardException("Card not found");
+        }
+
+        RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
+        this->clients[client_name] = rsa_key_pair.getPublic();
+        Publisher *pub = new Publisher(client_name, rsa_key_pair);
+        pub->setServer(this->key_pair.getPublic());
+
+        return pub;
+    }
 }
 
 

@@ -25,7 +25,7 @@ namespace cdax {
         this->log("published:", msg);
 
         // hmac and AES encrypt with end-to-end topic key
-        msg.encryptAndHMAC(this->topic_keys[topic].getEncKey());
+        msg.aesEncrypt(this->topic_keys[topic].getEncKey());
 
         // hmac with node topic key
         msg.hmac(this->topic_keys[topic].getAuthKey());

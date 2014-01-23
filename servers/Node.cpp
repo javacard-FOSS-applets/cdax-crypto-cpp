@@ -153,7 +153,7 @@ namespace cdax {
         }
 
         // verify topic data HMAC
-        if (!msg.verify(&this->topic_keys[msg.getTopic()])) {
+        if (!msg.hmacVerify(&this->topic_keys[msg.getTopic()])) {
 
             this->log("could not verify:", msg);
 

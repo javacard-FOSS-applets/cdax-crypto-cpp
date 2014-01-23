@@ -28,60 +28,51 @@ namespace cdax {
 
     void Message::decode(std::string encoded)
     {
-        size_t offset = 5;
-
         // decode fields based on length in header
-        this->id = encoded.substr(offset, encoded[0]);
-        this->topic = encoded.substr(offset += encoded[0] & 0xFF, encoded[1]);
-        this->iv = encoded.substr(offset += encoded[1] & 0xFF, encoded[2]);
-        // convert unsigned 64 bit integer from byte array to timestamp
+        size_t offset = 4;
+        this->setId(encoded.substr(offset, encoded[0] & 0xFF));
+        offset += encoded[0] & 0xFF;
+        this->setTopic(encoded.substr(offset, encoded[1] & 0xFF));
+        offset += encoded[1] & 0xFF;
+        this->setTimestamp(encoded.substr(offset, encoded[2] & 0xFF));
         offset += encoded[2] & 0xFF;
-        for (int i = 0; i < encoded[3]; i++) {
-            this->timestamp = (this->timestamp << 8) | (encoded[offset + i] & 0xFF);
-        }
-        this->signature = encoded.substr(offset += encoded[3] & 0xFF, encoded[4] & 0xFF);
-
-        // rest of the string is data
-        offset += encoded[4] & 0xFF;
-        this->data = encoded.substr(offset, encoded.size() - offset);
+        this->setSignature(encoded.substr(offset, encoded[3] & 0xFF));
+        offset += encoded[3] & 0xFF;
+        this->setData(encoded.substr(offset, encoded.size() - offset));
     }
 
-    const std::string Message::encode(bool all) const
+    const std::string Message::encode() const
     {
-        bytestring buffer(5);
+        bytestring buffer(4);
 
         // create header with field lengths
+        bytestring message_timestamp = this->getTimestamp();
         buffer[0] = this->id.size();
         buffer[1] = this->topic.size();
-        buffer[2] = this->iv.size();
-        size_t time_len = sizeof(this->timestamp);
-        buffer[3] = time_len;
-
-        if (all) {
-            buffer[4] = this->signature.size();
-        } else {
-            buffer[4] = 0x00;
-        }
+        buffer[2] = message_timestamp.size();
+        buffer[3] = this->signature.size();
 
         // assign fields
         buffer += this->id;
         buffer += this->topic;
-        buffer += this->iv;
-
-        // convert timestamp (64 bit uint) to byte array
-        size_t offset = buffer.size();
-        buffer.CleanGrow(offset + time_len);
-        for (int i = 0; i < time_len; i++) {
-            buffer[offset + time_len - 1 - i] = (this->timestamp >> (i * 8)) & 0xFF;
-        }
-
-        if (all) {
-            // assign message data
-            buffer += this->signature;
-            buffer += this->data;
-        }
+        buffer += message_timestamp;
+        buffer += this->signature;
+        buffer += this->data;
 
         return buffer.str();
+    }
+
+    const bytestring Message::getPayload() const
+    {
+        bytestring buffer;
+
+        // assign fields
+        buffer += this->id;
+        buffer += this->topic;
+        buffer += this->getTimestamp();
+        buffer += this->data;
+
+        return buffer;
     }
 
     /**
@@ -91,6 +82,15 @@ namespace cdax {
     void Message::setId(bytestring identity)
     {
         this->id = identity;
+    }
+
+    /**
+     * Get the sender identity
+     * @return string identity
+     */
+    bytestring Message::getId() const
+    {
+        return this->id;
     }
 
     /**
@@ -106,18 +106,9 @@ namespace cdax {
      * Get the topic name
      * @return string topic name
      */
-    bytestring Message::getTopic()
+    bytestring Message::getTopic() const
     {
         return this->topic;
-    }
-
-    /**
-     * Get the sender identity
-     * @return string identity
-     */
-    bytestring Message::getId()
-    {
-        return this->id;
     }
 
     /**
@@ -133,63 +124,63 @@ namespace cdax {
      * Get the message topic data/payload
      * @return string topic data
      */
-    bytestring Message::getData()
+    bytestring Message::getData() const
     {
         return this->data;
+    }
+
+    void Message::setTimestamp(bytestring message_timestamp)
+    {
+        this->timestamp = 0;
+        size_t size = message_timestamp.size();
+        for (int i = 0; i < size; i++) {
+            this->timestamp = (this->timestamp << 8) | (message_timestamp[i] & 0xFF);
+        }
+    }
+
+    // convert timestamp (64 bit uint) to byte array
+    bytestring Message::getTimestamp() const
+    {
+        size_t time_len = sizeof(this->timestamp);
+        bytestring message_timestamp(time_len);
+        for (int i = 0; i < time_len; i++) {
+            message_timestamp[time_len - 1 - i] = (this->timestamp >> (i * 8)) & 0xFF;
+        }
+        return message_timestamp;
+    }
+
+    /**
+     * Set the message signature or HMAC code as a string
+     * @param bytestring signature value
+     */
+    void Message::setSignature(bytestring sig)
+    {
+        this->signature = sig;
     }
 
     /**
      * Get the message signature or HMAC code as a string
      * @return string HMAC or RSA signature
      */
-    bytestring Message::getSignature()
+    bytestring Message::getSignature() const
     {
         return this->signature;
-    }
-
-    /**
-     * HMAC and AES encrypt the message using the same key.
-     * The HMAC is appended to the message topic data before encrypting
-     * @param bytestring key
-     */
-    void Message::encryptAndHMAC(bytestring* key)
-    {
-        this->encrypt(key);
-        this->hmac(key);
-        this->data += this->signature;
-        this->signature.clear();
-    }
-
-    /**
-     * AES decrypt the message and verify the HMAC
-     * @param  bytestring key AES and HMAC key
-     * @return bool true if decryption and verification are successful
-     */
-    bool Message::verifyAndDecrypt(bytestring* key)
-    {
-        this->signature = this->data.str().substr(this->data.size() - 32, 32);
-        this->data = this->data.str().substr(0, this->data.size() - 32);
-
-        if (!this->verify(key)) {
-            return false;
-        }
-
-        return this->decrypt(key);
     }
 
     /**
      * Encrypt the message topic data using AES CBC and a fresh random IV
      * @param bytestring key encryption key
      */
-    void Message::encrypt(bytestring* key)
+    void Message::aesEncrypt(bytestring* key)
     {
-        generateIV(CryptoPP::AES::BLOCKSIZE);
+        bytestring iv = this->generateIV(CryptoPP::AES::BLOCKSIZE);
         std::string ciphertext;
-        CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key->BytePtr(), key->size(), this->iv);
+        CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key->BytePtr(), key->size(), iv);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
         CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(encrypt, ss);
         CryptoPP::StringSource(this->data.str(), true, enc);
         this->data = ciphertext;
+        this->data.Assign(iv + this->data);
     }
 
     /**
@@ -198,17 +189,17 @@ namespace cdax {
      * @param  bytestring key AES key
      * @return bool true if decryption was successful
      */
-    bool Message::decrypt(bytestring* key)
+    bool Message::aesDecrypt(bytestring* key)
     {
         try {
             std::string plaintext;
-            CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key->BytePtr(), key->size(), this->iv);
+            bytestring iv = this->data.str().substr(0, CryptoPP::AES::BLOCKSIZE);
+            bytestring ciphertext = this->data.str().substr(CryptoPP::AES::BLOCKSIZE);
+            CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key->BytePtr(), key->size(), iv);
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(decrypt, ss);
-            CryptoPP::StringSource(this->data.str(), true, enc);
-            // this->iv.clear();
+            CryptoPP::StringSource(ciphertext.str(), true, enc);
             this->data = plaintext;
-
             return true;
         } catch(const CryptoPP::Exception& e) {
 
@@ -227,7 +218,7 @@ namespace cdax {
         CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::HashFilter *hf = new CryptoPP::HashFilter(hmac, ss);
-        CryptoPP::StringSource(this->encode(false), true, hf);
+        CryptoPP::StringSource(this->getPayload().str(), true, hf);
         this->signature = sig;
     }
 
@@ -236,14 +227,13 @@ namespace cdax {
      * @param  bytestring key HMAC key
      * @return bool true if the verification was successful
      */
-    bool Message::verify(bytestring* key)
+    bool Message::hmacVerify(bytestring* key)
     {
         try {
             CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
             const int flags = CryptoPP::HashVerificationFilter::THROW_EXCEPTION | CryptoPP::HashVerificationFilter::HASH_AT_END;
             CryptoPP::HashVerificationFilter *hvf = new CryptoPP::HashVerificationFilter(hmac, NULL, flags);
-            CryptoPP::StringSource(this->encode(false) + this->signature.str(), true, hvf);
-
+            CryptoPP::StringSource(this->getPayload().str() + this->signature.str(), true, hvf);
             return true;
         } catch(const CryptoPP::Exception& e) {
 
@@ -308,7 +298,7 @@ namespace cdax {
         CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(*key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
-        CryptoPP::StringSource(this->encode(false), true, sf);
+        CryptoPP::StringSource(this->getPayload().str(), true, sf);
 
         this->signature = sig;
     }
@@ -324,7 +314,7 @@ namespace cdax {
             CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(*key);
             const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
             CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
-            CryptoPP::StringSource(this->encode(false) + this->signature.str(), true, svf);
+            CryptoPP::StringSource(this->getPayload().str() + this->signature.str(), true, svf);
 
             return true;
         } catch(const CryptoPP::Exception& e) {
@@ -333,9 +323,9 @@ namespace cdax {
         }
     }
 
-    bool Message::signOnCard(SmartCard* card)
+    bool Message::sign(SmartCard* card)
     {
-        bytestring buffer = this->encode(false);
+        bytestring buffer = this->getPayload();
         if (!card->sign(buffer)) {
             return false;
         }
@@ -344,24 +334,24 @@ namespace cdax {
         return true;
     }
 
-    bool Message::verifyOnCard(SmartCard* card)
+    bool Message::verify(SmartCard* card)
     {
-        bytestring buffer = this->encode(false);
+        bytestring buffer = this->getPayload();
         buffer.Assign(buffer + this->signature);
         return card->verify(buffer);
     }
 
-    bool Message::encryptOnCard(SmartCard* card)
+    bool Message::encrypt(SmartCard* card)
     {
         return card->encrypt(this->data);
     }
 
-    bool Message::decryptOnCard(SmartCard* card)
+    bool Message::decrypt(SmartCard* card)
     {
         return card->decrypt(this->data);
     }
 
-    bool Message::aesEncryptOnCard(SmartCard* card)
+    bool Message::aesEncrypt(SmartCard* card)
     {
         // add pkcs7 padding
         size_t size = this->data.size();
@@ -371,33 +361,31 @@ namespace cdax {
             this->data[i] = padding;
         }
 
-        if (!card->encryptAES(this->data)) {
+        if (!card->aesDecrypt(this->data)) {
             return false;
         }
-
-        this->iv =  this->data.str().substr(0, CryptoPP::AES::BLOCKSIZE);
-        this->data = this->data.str().substr(CryptoPP::AES::BLOCKSIZE, this->data.size() - CryptoPP::AES::BLOCKSIZE);
 
         return true;
     }
 
-    bool Message::aesDecryptOnCard(SmartCard* card)
+    bool Message::aesDecrypt(SmartCard* card)
     {
-        bytestring buffer;
-        buffer.Assign(this->iv + this->data);
-        if (!card->decryptAES(buffer)) {
+        bytestring buffer = this->data;
+        if (!card->aesDecrypt(this->data)) {
             return false;
         }
+
         // remove pkcs7 padding
-        buffer.resize(buffer.size() - buffer[buffer.size() - 1]);
-        this->data = buffer;
+        size_t len = this->data.size();
+        this->data.resize(len - (this->data[len - 1] & 0xFF));
+
         return true;
     }
 
-    bool Message::hmacOnCard(SmartCard* card)
+    bool Message::hmac(SmartCard* card)
     {
-        bytestring buffer = this->encode(false);
-        if (!card->appendHMAC(buffer)) {
+        bytestring buffer = this->getPayload();
+        if (!card->hmac(buffer)) {
             return false;
         }
         this->signature = buffer;
@@ -405,11 +393,11 @@ namespace cdax {
         return true;
     }
 
-    bool Message::verifyHMACOnCard(SmartCard* card)
+    bool Message::hmacVerify(SmartCard* card)
     {
-        bytestring buffer = this->encode(false);
+        bytestring buffer = this->getPayload();
         buffer.Assign(buffer + this->signature);
-        return card->verifyHMAC(buffer);
+        return card->hmacVerify(buffer);
     }
 
     /**
@@ -417,11 +405,12 @@ namespace cdax {
      * class attribute iv as a bytestring
      * @param int length the length of the IV
      */
-    void Message::generateIV(int length)
+    bytestring Message::generateIV(int length) const
     {
         CryptoPP::AutoSeededRandomPool prng;
-        this->iv = bytestring(length);
-        prng.GenerateBlock(this->iv, length);
+        bytestring iv = bytestring(length);
+        prng.GenerateBlock(iv, length);
+        return iv;
     }
 
     /**
@@ -432,18 +421,12 @@ namespace cdax {
     std::ostream &operator<< (std::ostream &out, const Message &msg)
     {
         out << "data: " << hex(msg.data) << std::endl;
-
-        if (msg.iv.size() > 0) {
-            out << "iv: " << hex(msg.iv) << std::endl;
-        }
-
         out << "topic: " << msg.topic << std::endl;
         out << "source: " << msg.id << std::endl;
-        out << "time: " << std::ctime(&msg.timestamp);
-
         if (msg.signature.size() > 0) {
-            out << "mac/signature: " << hex(msg.signature) << std::endl;
+            out << "hmac/signature: " << hex(msg.signature) << std::endl;
         }
+        out << "time: " << std::ctime(&msg.timestamp);
 
         return out;
     }

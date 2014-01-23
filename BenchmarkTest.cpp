@@ -96,7 +96,7 @@ void cryptoBenchmark()
     bytestring* key = new bytestring(16);
     prng.GenerateBlock(key->BytePtr(), key->size());
 
-    if (!card->storeKey(key)) {
+    if (!card->storeTopicKey(key)) {
         std::cerr << "Could not store sym key on card" << std::endl;
         return;
     }
@@ -110,7 +110,8 @@ void cryptoBenchmark()
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
-            card->transmit(0x20, data);
+            msg.setData(data);
+            msg.hmac(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }
@@ -123,7 +124,7 @@ void cryptoBenchmark()
             data.resize(len);
             msg.setData(data);
             msg.hmac(key);
-            msg.verifyHMACOnCard(card);
+            msg.hmacVerify(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }
@@ -134,7 +135,8 @@ void cryptoBenchmark()
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
-            card->transmit(0x30, data);
+            msg.setData(data);
+            msg.aesEncrypt(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }
@@ -146,8 +148,8 @@ void cryptoBenchmark()
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.encrypt(key);
-            msg.aesDecryptOnCard(card);
+            msg.aesEncrypt(key);
+            msg.aesDecrypt(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }
@@ -214,7 +216,7 @@ void rsaBenchmark()
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.signOnCard(card);
+            msg.sign(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }
@@ -227,7 +229,7 @@ void rsaBenchmark()
             data.resize(len);
             msg.setData(data);
             msg.sign(serverKeyPair->getPrivate());
-            msg.verifyOnCard(card);
+            msg.verify(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }
@@ -239,7 +241,7 @@ void rsaBenchmark()
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.encryptOnCard(card);
+            msg.encrypt(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }
@@ -252,7 +254,7 @@ void rsaBenchmark()
             data.resize(len);
             msg.setData(data);
             msg.encrypt(clientPub);
-            msg.decryptOnCard(card);
+            msg.decrypt(card);
         }
         std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
     }

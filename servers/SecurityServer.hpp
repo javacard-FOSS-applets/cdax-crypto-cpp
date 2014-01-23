@@ -44,9 +44,10 @@ namespace cdax {
         SecurityServer(bytestring identity, std::string port_number);
 
         void addTopic(bytestring topic_name);
-        Node addNode(bytestring node_name, std::string port);
-        Publisher addPublisher(bytestring client_name);
-        Subscriber addSubscriber(bytestring client_name, std::string port);
+        Node* addNode(bytestring node_name, std::string port);
+        Publisher* addPublisher(bytestring client_name);
+        Publisher* addPublisher(bytestring client_name, SmartCard *card);
+        Subscriber* addSubscriber(bytestring client_name, std::string port);
 
 
     };

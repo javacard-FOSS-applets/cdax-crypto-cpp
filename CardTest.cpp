@@ -35,8 +35,11 @@ void signatuteTest()
         return;
     }
 
+    card->setDebug(true);
+
     RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
+
 
     // Generate RSA Parameters
 
@@ -54,12 +57,15 @@ void signatuteTest()
         RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
     }
 
+
     if (file_exists("data/client-pub.key")) {
         clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
     } else {
         clientPub = card->initialize(serverKeyPair->getPublic());
         RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
     }
+
+    /*
 
     if (clientPub == NULL) {
         log(card->getError());
@@ -70,7 +76,7 @@ void signatuteTest()
     Message msg("test_id", "test_topic", "test_data");
     std::cout << msg;
 
-    msg.signOnCard(card);
+    msg.sign(card);
     log("> message signed on card");
 
     if (msg.verify(clientPub)) {
@@ -80,7 +86,7 @@ void signatuteTest()
     msg.sign(serverKeyPair->getPrivate());
     log("> message signed");
 
-    if (msg.verifyOnCard(card)) {
+    if (msg.verify(card)) {
         log("> signature verified on card");
     }
 
@@ -90,7 +96,7 @@ void signatuteTest()
 
     msg.setData("test_data");
 
-    msg.encryptOnCard(card);
+    msg.encrypt(card);
     log("> message encrypted on card");
     std::cout << msg;
 
@@ -103,7 +109,7 @@ void signatuteTest()
     log("> message encrypted");
     std::cout << msg;
 
-    if (msg.decryptOnCard(card)) {
+    if (msg.decrypt(card)) {
         log("> message decrypted on card");
         std::cout << msg;
     }
@@ -114,41 +120,43 @@ void signatuteTest()
 
     std::cout << "> key: " << key->hex() << std::endl;
 
-    if (card->storeKey(key)) {
+    if (card->storeTopicKey(key)) {
         log("> stored key on card");
 
-        msg.encrypt(key);
+        msg.aesEncrypt(key);
         log("> message encrypted");
         std::cout << msg;
 
-        msg.aesDecryptOnCard(card);
+        msg.aesDecrypt(card);
         log("> message decrypted on card");
         std::cout << msg;
 
-        msg.aesEncryptOnCard(card);
+        msg.aesEncrypt(card);
         log("> message encrypted on card");
         std::cout << msg;
 
-        msg.decrypt(key);
+        msg.aesDecrypt(key);
         log("> message decrypted");
         std::cout << msg;
 
         msg.hmac(key);
         std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
 
-        if (msg.verifyHMACOnCard(card)) {
+        if (msg.hmacVerify(card)) {
             log("> messaged hmac verified on card");
         }
 
-        msg.hmacOnCard(card);
+        msg.hmac(card);
         std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
 
-        if (msg.verify(key)) {
+        if (msg.hmacVerify(key)) {
             log("> messaged hmac verified");
         } else {
             log("> could not verify message hmac");
         }
     }
+
+    */
 
 }
 

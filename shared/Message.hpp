@@ -46,14 +46,6 @@ namespace cdax {
         // time of message creation
         std::time_t timestamp;
 
-        // AES encryption initialisation vector
-        bytestring iv;
-
-        void generateIV(int length);
-
-        bytestring getIV();
-        void setIV(bytestring sec_iv);
-
         friend std::ostream &operator<< (std::ostream &out, const Message &msg);
         friend class boost::serialization::access;
 
@@ -89,27 +81,32 @@ namespace cdax {
         Message(bytestring identity, bytestring topic_name, bytestring topic_data);
 
         void decode(std::string encoded);
-        const std::string encode(bool all = true) const;
+        const std::string encode() const;
+
+        const bytestring getPayload() const;
+
+        bytestring generateIV(int length) const;
 
         void setId(bytestring identity);
-        bytestring getId();
+        bytestring getId() const;
 
         void setTopic(bytestring topic_name);
-        bytestring getTopic();
+        bytestring getTopic() const;
+
+        void setTimestamp(bytestring message_timestamp);
+        bytestring getTimestamp() const;
 
         void setData(bytestring topic_data);
-        bytestring getData();
+        bytestring getData() const;
 
-        bytestring getSignature();
+        void setSignature(bytestring sig);
+        bytestring getSignature() const;
 
-        void encryptAndHMAC(bytestring* key);
-        bool verifyAndDecrypt(bytestring* key);
-
-        void encrypt(bytestring* key);
-        bool decrypt(bytestring* key);
+        void aesEncrypt(bytestring* key);
+        bool aesDecrypt(bytestring* key);
 
         void hmac(bytestring* key);
-        bool verify(bytestring* key);
+        bool hmacVerify(bytestring* key);
 
         void encrypt(CryptoPP::RSA::PublicKey* key);
         bool decrypt(CryptoPP::RSA::PrivateKey* key);
@@ -117,17 +114,17 @@ namespace cdax {
         void sign(CryptoPP::RSA::PrivateKey* key);
         bool verify(CryptoPP::RSA::PublicKey* key);
 
-        bool signOnCard(SmartCard* card);
-        bool verifyOnCard(SmartCard* card);
+        bool sign(SmartCard* card);
+        bool verify(SmartCard* card);
 
-        bool encryptOnCard(SmartCard* card);
-        bool decryptOnCard(SmartCard* card);
+        bool encrypt(SmartCard* card);
+        bool decrypt(SmartCard* card);
 
-        bool hmacOnCard(SmartCard* card);
-        bool verifyHMACOnCard(SmartCard* card);
+        bool hmac(SmartCard* card);
+        bool hmacVerify(SmartCard* card);
 
-        bool aesEncryptOnCard(SmartCard* card);
-        bool aesDecryptOnCard(SmartCard* card);
+        bool aesEncrypt(SmartCard* card);
+        bool aesDecrypt(SmartCard* card);
     };
 
 }

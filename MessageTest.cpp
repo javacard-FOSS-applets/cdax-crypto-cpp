@@ -48,11 +48,10 @@ void testEncrypt()
     std::cout << "message plaintext: " << msg->getData().hex() << std::endl;
     std::cout << "AES key: " << aes_key->hex() << std::endl;
 
-
-    msg->encrypt(aes_key);
+    msg->aesEncrypt(aes_key);
     std::cout << "AES ciphertext: " << msg->getData().hex() << std::endl;
 
-    msg->decrypt(aes_key);
+    msg->aesDecrypt(aes_key);
     std::cout << "decrypted plaintext: " << msg->getData().str() << std::endl << line << std::endl;
 }
 
@@ -70,7 +69,7 @@ void testHMAC()
     msg->hmac(hmac_key);
     std::cout << "HMAC: " << msg->getSignature().hex() << std::endl;
 
-    msg->verify(hmac_key);
+    msg->hmacVerify(hmac_key);
     std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
@@ -101,26 +100,6 @@ void testRSA()
     std::cout << "verification successfull" << std::endl << line << std::endl;
 }
 
-/**
- * Test message encryption and signing in one method using the same key
- */
-void testSignCrypt()
-{
-    Message *msg = new Message();
-    msg->setData("foo bar");
-
-    bytestring* key = generateKey(16);
-    std::cout << "AES and HMAC key: " << key->hex() << std::endl;
-
-    msg->encryptAndHMAC(key);
-    std::cout << "HMAC: " << msg->getSignature().hex() << std::endl;
-    std::cout << "message data: " << msg->getData().hex() << std::endl;
-
-    msg->verifyAndDecrypt(key);
-    std::cout << "decrypted plaintext: " << msg->getData().str() << std::endl << line << std::endl;
-    std::cout << "verification successfull" << std::endl << line << std::endl;
-}
-
 void testEncode()
 {
     Message msg = Message("foo", "bar", "baz");
@@ -130,7 +109,7 @@ void testEncode()
 
     msg.encrypt(keypair->getPublic());
     msg.sign(keypair->getPrivate());
-    msg.encrypt(key);
+    msg.aesEncrypt(key);
 
     std::cout << "Message:" << msg << std::endl;
 
@@ -138,7 +117,8 @@ void testEncode()
 
     std::cout << "Encoded:" << hex(encoded) << std::endl;
 
-    Message msg2 = Message(encoded);
+    Message msg2 = Message();
+    msg2.decode(encoded);
 
     std::cout << "Decoded:" << msg2 << std::endl;
 }
@@ -156,7 +136,6 @@ int main(int argc, char* argv[])
     testEncrypt();
     testHMAC();
     testRSA();
-    testSignCrypt();
     testEncode();
 
     return 0;

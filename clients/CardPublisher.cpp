@@ -1,7 +1,15 @@
 
-#include "Client.hpp"
+#include "CardPublisher.hpp"
 
 namespace cdax {
+
+    CardPublisher::CardPublisher(bytestring identity, SmartCard *card)
+    {
+        this->id = identity;
+
+        // terminal log color
+        this->color = BLUE;
+    }
 
     /**
      * Add a topic name and request its corresponding topic keys from the security server
@@ -18,6 +26,15 @@ namespace cdax {
 
         // sign with private key
         request.sign(this->key_pair.getPrivate());
+
+        if (this->card != NULL) {
+
+            this->log("signed on device:", request);
+
+            request.signOnCard(this->card);
+
+            this->log("signed on card:", request);
+        }
 
         this->log("sent topic join request for " + topic_name.str());
 
@@ -53,13 +70,21 @@ namespace cdax {
         this->topic_keys[topic_name] = topic_key_pair;
     }
 
-    /**
-     * Set security server public key to verify topic join reponses
-     * @param CryptoPP::RSA::PublicKey key security server public key
-     */
-    void Client::setServer(CryptoPP::RSA::PublicKey *key)
+
+    void CardPublisher::publishMessage(bytestring topic, bytestring data)
     {
-        this->sec_server_key = key;
+        // create random topic data message
+        Message msg(this->id, topic, data);
+
+        this->log("published:", msg);
+
+        // hmac and AES encrypt with end-to-end topic key
+        msg.encryptAndHMAC(this->topic_keys[topic].getEncKey());
+
+        // hmac with node topic key
+        msg.hmac(this->topic_keys[topic].getAuthKey());
+
+        send(msg, this->topic_ports[topic]);
     }
 
 }
