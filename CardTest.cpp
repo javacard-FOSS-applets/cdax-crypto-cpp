@@ -91,8 +91,6 @@ void signatuteTest()
         return;
     }
 
-    /*
-
     msg.sign(card);
     log("> message signed on card");
 
@@ -173,15 +171,24 @@ void signatuteTest()
         }
     }
 
-    */
-
     // topic join response
     msg.setData(*topic_key_pair->getValue());
     msg.encrypt(clientPub);
     msg.sign(serverKeyPair->getPrivate());
+
+    std::cout << msg;
+
     msg.handleTopicKeyResponse(card);
 
+    msg.setData("hello");
 
+    msg.aesEncrypt(topic_key_pair->getEncKey());
+    msg.aesDecrypt(card);
+    msg.hmac(topic_key_pair->getAuthKey());
+
+    if (msg.hmacVerify(card)) {
+        log("> messaged hmac verified on card");
+    }
 
 }
 

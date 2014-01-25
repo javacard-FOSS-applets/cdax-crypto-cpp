@@ -35,7 +35,7 @@ public class ClientApplet extends Applet implements ExtendedLength
 
     private static final byte STORE_TOPIC_KEY = (byte) 0x07;
     private static final byte ENCODE = (byte) 0x08;
-    private static final byte DECODE = (byte) 0x08;
+    private static final byte DECODE = (byte) 0x09;
 
     private static final byte RSA_SIGN = (byte) 0x10;
     private static final byte RSA_VERIFY = (byte) 0x11;
@@ -185,11 +185,11 @@ public class ClientApplet extends Applet implements ExtendedLength
         offset += (short) 2;
         Signature rsa_ver = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
         rsa_ver.init(this.masterKey, Signature.MODE_VERIFY);
-        short rsa_data_len = (short) (length - RSA_SIGN_LEN - offset);
-        if (!rsa_ver.verify(buffer, offset, rsa_data_len, buffer, (short) (length - RSA_SIGN_LEN), RSA_SIGN_LEN)) {
+        short rsa_data_len = (short) (length - RSA_SIGN_LEN - 2);
+        if (!rsa_ver.verify(buffer, offset, rsa_data_len, buffer, (short) (offset + rsa_data_len), RSA_SIGN_LEN)) {
             ISOException.throwIt(ISO7816.SW_DATA_INVALID);
         }
-        offset = (short) (length - RSA_SIGN_LEN - offset - data_len);
+        offset = (short) (offset + rsa_data_len - data_len);
         rsaCipher.init(this.keyPair.getPrivate(), Cipher.MODE_DECRYPT);
         short len = rsaCipher.doFinal(buffer, offset, data_len, buffer, ZERO);
         this.store_key(buffer, ZERO, len, p1);

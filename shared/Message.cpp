@@ -404,8 +404,8 @@ namespace cdax {
     {
         bytestring buffer(2);
         size_t data_len = this->getData().size();
-        buffer[0] = (data_len >> (0 * 8)) & 0xFF;
-        buffer[1] = (data_len >> (1 * 8)) & 0xFF;
+        buffer[0] = (data_len >> (8)) & 0xFF;
+        buffer[1] = (data_len >> (2 * 8)) & 0xFF;
         buffer.Assign(buffer + this->getPayload() + this->getSignature());
 
         return card->handleTopicKeyResponse(buffer);
