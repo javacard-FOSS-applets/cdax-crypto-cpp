@@ -47,6 +47,8 @@ namespace cdax {
         bool storeTopicKey(bytestring* key);
         bool storePrivateKey(CryptoPP::RSA::PrivateKey* privKey);
 
+        bool handleTopicKeyResponse(bytestring &msg);
+
         bool connect();
         CryptoPP::RSA::PublicKey* initialize(CryptoPP::RSA::PublicKey* secServerPub);
 

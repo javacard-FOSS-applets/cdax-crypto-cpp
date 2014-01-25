@@ -71,7 +71,7 @@ namespace cdax {
         if (this->clients.count(msg.getId())) {
 
             // encode topic key pair for client
-            data = this->topics[msg.getTopic()].getValue();
+            data = *this->topics[msg.getTopic()].getValue();
         } else {
 
             // encode hmac key for node

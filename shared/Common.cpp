@@ -144,10 +144,10 @@ namespace cdax {
         this->authenticationKey = auth_key;
     }
 
-    bytestring TopicKeyPair::getValue()
+    bytestring* TopicKeyPair::getValue()
     {
-        bytestring buffer;
-        buffer.Assign(this->encryptionKey + this->authenticationKey);
+        bytestring *buffer = new bytestring();
+        buffer->Assign(this->encryptionKey + this->authenticationKey);
         return buffer;
     }
 

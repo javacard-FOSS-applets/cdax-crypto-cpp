@@ -20,6 +20,19 @@ void log(std::string msg)
     std::cout << msg << std::endl << line << std::endl;
 }
 
+/**
+ * Generate AES or HMAC key
+ * @param  int length
+ * @return bytestring
+ */
+bytestring* generateKey(size_t length)
+{
+    CryptoPP::AutoSeededRandomPool prng;
+    bytestring* key = new bytestring(length);
+    prng.GenerateBlock(key->BytePtr(), key->size());
+    return key;
+}
+
 
 void signatuteTest()
 {
@@ -40,6 +53,14 @@ void signatuteTest()
     RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
 
+    // create message
+    Message msg("test_id", "test_topic", "test_data");
+    std::cout << msg;
+
+    TopicKeyPair *topic_key_pair = new TopicKeyPair(
+        *generateKey(TopicKeyPair::KeyLength),
+        *generateKey(TopicKeyPair::KeyLength)
+    );
 
     // Generate RSA Parameters
 
@@ -65,16 +86,12 @@ void signatuteTest()
         RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
     }
 
-    /*
-
     if (clientPub == NULL) {
         log(card->getError());
         return;
     }
 
-    // create message
-    Message msg("test_id", "test_topic", "test_data");
-    std::cout << msg;
+    /*
 
     msg.sign(card);
     log("> message signed on card");
@@ -114,16 +131,12 @@ void signatuteTest()
         std::cout << msg;
     }
 
-    CryptoPP::AutoSeededRandomPool prng;
-    bytestring* key = new bytestring(16);
-    prng.GenerateBlock(key->BytePtr(), key->size());
+    std::cout << "> key: " << topic_key_pair->getEncKey()->hex() << std::endl;
 
-    std::cout << "> key: " << key->hex() << std::endl;
-
-    if (card->storeTopicKey(key)) {
+    if (card->storeTopicKey(topic_key_pair->getValue())) {
         log("> stored key on card");
 
-        msg.aesEncrypt(key);
+        msg.aesEncrypt(topic_key_pair->getEncKey());
         log("> message encrypted");
         std::cout << msg;
 
@@ -135,12 +148,16 @@ void signatuteTest()
         log("> message encrypted on card");
         std::cout << msg;
 
-        msg.aesDecrypt(key);
+        msg.aesDecrypt(topic_key_pair->getEncKey());
         log("> message decrypted");
         std::cout << msg;
 
-        msg.hmac(key);
+        std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
+
+        msg.hmac(topic_key_pair->getAuthKey());
         std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+
+        std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
 
         if (msg.hmacVerify(card)) {
             log("> messaged hmac verified on card");
@@ -149,7 +166,7 @@ void signatuteTest()
         msg.hmac(card);
         std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
 
-        if (msg.hmacVerify(key)) {
+        if (msg.hmacVerify(topic_key_pair->getAuthKey())) {
             log("> messaged hmac verified");
         } else {
             log("> could not verify message hmac");
@@ -157,6 +174,14 @@ void signatuteTest()
     }
 
     */
+
+    // topic join response
+    msg.setData(*topic_key_pair->getValue());
+    msg.encrypt(clientPub);
+    msg.sign(serverKeyPair->getPrivate());
+    msg.handleTopicKeyResponse(card);
+
+
 
 }
 

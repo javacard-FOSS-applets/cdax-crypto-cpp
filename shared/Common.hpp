@@ -93,7 +93,7 @@ namespace cdax {
 
         bytestring* getEncKey();
         bytestring* getAuthKey();
-        bytestring getValue();
+        bytestring* getValue();
 
         std::string toString();
     };

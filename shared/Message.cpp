@@ -361,7 +361,7 @@ namespace cdax {
             this->data[i] = padding;
         }
 
-        if (!card->aesDecrypt(this->data)) {
+        if (!card->aesEncrypt(this->data)) {
             return false;
         }
 
@@ -398,6 +398,17 @@ namespace cdax {
         bytestring buffer = this->getPayload();
         buffer.Assign(buffer + this->signature);
         return card->hmacVerify(buffer);
+    }
+
+    bool Message::handleTopicKeyResponse(SmartCard* card)
+    {
+        bytestring buffer(2);
+        size_t data_len = this->getData().size();
+        buffer[0] = (data_len >> (0 * 8)) & 0xFF;
+        buffer[1] = (data_len >> (1 * 8)) & 0xFF;
+        buffer.Assign(buffer + this->getPayload() + this->getSignature());
+
+        return card->handleTopicKeyResponse(buffer);
     }
 
     /**

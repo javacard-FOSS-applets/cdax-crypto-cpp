@@ -125,6 +125,8 @@ namespace cdax {
 
         bool aesEncrypt(SmartCard* card);
         bool aesDecrypt(SmartCard* card);
+
+        bool handleTopicKeyResponse(SmartCard* card);
     };
 
 }

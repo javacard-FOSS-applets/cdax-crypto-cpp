@@ -336,13 +336,17 @@ namespace cdax {
 
     bool SmartCard::aesEncrypt(bytestring &msg)
     {
-        return this->transmit(0x30, msg, 0x00, 0x01);
+        return this->transmit(0x30, msg, 0x00, 0x10);
     }
 
     bool SmartCard::aesDecrypt(bytestring &msg)
     {
-
         return this->transmit(0x31, msg);
+    }
+
+    bool SmartCard::handleTopicKeyResponse(bytestring &msg)
+    {
+        return this->transmit(0x07, msg);
     }
 
 };
