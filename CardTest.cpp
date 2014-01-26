@@ -48,7 +48,7 @@ void signatuteTest()
         return;
     }
 
-    card->setDebug(true);
+    card->setDebug(false);
 
     RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
@@ -91,104 +91,123 @@ void signatuteTest()
         return;
     }
 
-    msg.sign(card);
-    log("> message signed on card");
+    // msg.sign(card);
+    // log("> message signed on card");
 
-    if (msg.verify(clientPub)) {
-        log("> signature verified");
-    }
+    // if (msg.verify(clientPub)) {
+    //     log("> signature verified");
+    // }
 
-    msg.sign(serverKeyPair->getPrivate());
-    log("> message signed");
+    // msg.sign(serverKeyPair->getPrivate());
+    // log("> message signed");
 
-    if (msg.verify(card)) {
-        log("> signature verified on card");
-    }
+    // if (msg.verify(card)) {
+    //     log("> signature verified on card");
+    // }
 
-    msg.encrypt(serverKeyPair->getPublic());
-    log("> message encrypted");
-    std::cout << msg;
+    // msg.encrypt(serverKeyPair->getPublic());
+    // log("> message encrypted");
+    // std::cout << msg;
 
-    msg.setData("test_data");
+    // msg.setData("test_data");
 
-    msg.encrypt(card);
-    log("> message encrypted on card");
-    std::cout << msg;
+    // msg.encrypt(card);
+    // log("> message encrypted on card");
+    // std::cout << msg;
 
-    if (msg.decrypt(serverKeyPair->getPrivate())) {
-        log("> message decrypted");
-        std::cout << msg;
-    }
+    // if (msg.decrypt(serverKeyPair->getPrivate())) {
+    //     log("> message decrypted");
+    //     std::cout << msg;
+    // }
 
-    msg.encrypt(clientPub);
-    log("> message encrypted");
-    std::cout << msg;
+    // msg.encrypt(clientPub);
+    // log("> message encrypted");
+    // std::cout << msg;
 
-    if (msg.decrypt(card)) {
-        log("> message decrypted on card");
-        std::cout << msg;
-    }
+    // if (msg.decrypt(card)) {
+    //     log("> message decrypted on card");
+    //     std::cout << msg;
+    // }
 
-    std::cout << "> key: " << topic_key_pair->getEncKey()->hex() << std::endl;
+    // std::cout << "> key: " << topic_key_pair->getEncKey()->hex() << std::endl;
 
-    if (card->storeTopicKey(topic_key_pair->getValue())) {
-        log("> stored key on card");
+    // if (card->storeTopicKey(topic_key_pair->getValue())) {
+    //     log("> stored key on card");
 
-        msg.aesEncrypt(topic_key_pair->getEncKey());
-        log("> message encrypted");
-        std::cout << msg;
+    //     msg.aesEncrypt(topic_key_pair->getEncKey());
+    //     log("> message encrypted");
+    //     std::cout << msg;
 
-        msg.aesDecrypt(card);
-        log("> message decrypted on card");
-        std::cout << msg;
+    //     msg.aesDecrypt(card);
+    //     log("> message decrypted on card");
+    //     std::cout << msg;
 
-        msg.aesEncrypt(card);
-        log("> message encrypted on card");
-        std::cout << msg;
+    //     msg.aesEncrypt(card);
+    //     log("> message encrypted on card");
+    //     std::cout << msg;
 
-        msg.aesDecrypt(topic_key_pair->getEncKey());
-        log("> message decrypted");
-        std::cout << msg;
+    //     msg.aesDecrypt(topic_key_pair->getEncKey());
+    //     log("> message decrypted");
+    //     std::cout << msg;
 
-        std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
+    //     std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
 
-        msg.hmac(topic_key_pair->getAuthKey());
-        std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+    //     msg.hmac(topic_key_pair->getAuthKey());
+    //     std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
 
-        std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
+    //     std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
 
-        if (msg.hmacVerify(card)) {
-            log("> messaged hmac verified on card");
-        }
+    //     if (msg.hmacVerify(card)) {
+    //         log("> messaged hmac verified on card");
+    //     }
 
-        msg.hmac(card);
-        std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
+    //     msg.hmac(card);
+    //     std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
 
-        if (msg.hmacVerify(topic_key_pair->getAuthKey())) {
-            log("> messaged hmac verified");
-        } else {
-            log("> could not verify message hmac");
-        }
-    }
+    //     if (msg.hmacVerify(topic_key_pair->getAuthKey())) {
+    //         log("> messaged hmac verified");
+    //     } else {
+    //         log("> could not verify message hmac");
+    //     }
+    // }
 
     // topic join response
     msg.setData(*topic_key_pair->getValue());
     msg.encrypt(clientPub);
     msg.sign(serverKeyPair->getPrivate());
 
-    std::cout << msg;
+    std::cout << "> topic key pair: " << topic_key_pair->getValue()->hex() << std::endl;
 
     msg.handleTopicKeyResponse(card);
 
     msg.setData("hello");
 
-    msg.aesEncrypt(topic_key_pair->getEncKey());
-    msg.aesDecrypt(card);
     msg.hmac(topic_key_pair->getAuthKey());
+    std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+    msg.hmac(card);
+    std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
 
-    if (msg.hmacVerify(card)) {
-        log("> messaged hmac verified on card");
-    }
+    card->storeTopicKey(topic_key_pair->getValue());
+
+    msg.hmac(topic_key_pair->getAuthKey());
+    std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+    msg.hmac(card);
+    std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+
+    // msg.setData("hello");
+
+    // msg.aesEncrypt(topic_key_pair->getEncKey());
+    // msg.aesDecrypt(card);
+
+    // msg.hmac(topic_key_pair->getAuthKey());
+    // std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+
+    // msg.hmac(card);
+    // std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+
+    // if (msg.hmacVerify(card)) {
+    //     log("> messaged hmac verified on card");
+    // }
 
 }
 

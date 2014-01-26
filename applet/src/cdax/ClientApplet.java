@@ -69,11 +69,12 @@ public class ClientApplet extends Applet implements ExtendedLength
     private RSAPublicKey masterKey;
 
     // topic key count
-    private static final short TOPIC_KEY_COUNT = 2;
+    private static final short TOPIC_KEY_COUNT = 1;
 
-    // private HMACKey hmacKey;
-    private byte[] hmacKey;
-    private byte[] aesKey;
+    // private HMACKey hmacKeys;
+    private byte[] hmacKeys;
+    private byte[] aesKeys;
+    private AESKey aesKey;
 
     // client RSA key pair
     private KeyPair keyPair;
@@ -87,8 +88,9 @@ public class ClientApplet extends Applet implements ExtendedLength
     {
         this.register();
         this.masterKey = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_2048,false);
-        this.hmacKey = new byte[(short) (HMAC_KEY_SIZE * TOPIC_KEY_COUNT)];
-        this.aesKey = new byte[(short) (AES_KEY_SIZE * TOPIC_KEY_COUNT)];
+        this.hmacKeys = new byte[(short) (HMAC_KEY_SIZE * TOPIC_KEY_COUNT)];
+        this.aesKeys = new byte[(short) (AES_KEY_SIZE * TOPIC_KEY_COUNT)];
+        this.aesKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
         this.keyPair = new KeyPair(KeyPair.ALG_RSA_CRT, KeyBuilder.LENGTH_RSA_2048);
         this.rsaCipher = Cipher.getInstance(Cipher.ALG_RSA_PKCS1, false);
         this.aesCipher = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
@@ -135,8 +137,9 @@ public class ClientApplet extends Applet implements ExtendedLength
                 apdu.setOutgoing();
                 break;
             case STORE_TOPIC_KEY:
-                this.store_topic_key(buffer, HEADER_LEN, LEN, P1);
-                apdu.setOutgoing();
+                short len = this.store_topic_key(buffer, HEADER_LEN, LEN);
+                this.store_key(buffer, ZERO, len, P1);
+                apdu.setOutgoingAndSend(ZERO, len);
                 break;
             case STORE_KEY:
                 this.store_key(buffer, HEADER_LEN, LEN, P1);
@@ -179,7 +182,7 @@ public class ClientApplet extends Applet implements ExtendedLength
         }
     }
 
-    private void store_topic_key(byte[] buffer, short offset, short length, short p1)
+    private short store_topic_key(byte[] buffer, short offset, short length)
     {
         short data_len = Util.getShort(buffer, offset);
         offset += (short) 2;
@@ -191,8 +194,7 @@ public class ClientApplet extends Applet implements ExtendedLength
         }
         offset = (short) (offset + rsa_data_len - data_len);
         rsaCipher.init(this.keyPair.getPrivate(), Cipher.MODE_DECRYPT);
-        short len = rsaCipher.doFinal(buffer, offset, data_len, buffer, ZERO);
-        this.store_key(buffer, ZERO, len, p1);
+        return rsaCipher.doFinal(buffer, offset, data_len, buffer, ZERO);
     }
 
     private short generate_keyPair(byte[] buffer)
@@ -212,17 +214,19 @@ public class ClientApplet extends Applet implements ExtendedLength
 
     private void store_key(byte[] buffer, short offset, short length, short p1)
     {
-        Util.arrayCopyNonAtomic(buffer, offset, this.aesKey, (short) (AES_KEY_SIZE * p1), length);
+        length = (short) 16;
+        p1 = (short) 0;
+        Util.arrayCopyNonAtomic(buffer, offset, this.aesKeys, (short) (AES_KEY_SIZE * p1), AES_KEY_SIZE);
         offset += AES_KEY_SIZE;
         // crate hmac keys
         for (short i = ZERO; i < length; i++) {
-            this.hmacKey[(short) (HMAC_KEY_SIZE * p1 + i)] = (byte) (buffer[(short) (offset + i)] ^ 0x36);
+            this.hmacKeys[(short) (HMAC_KEY_SIZE * p1 + i)] = (byte) (buffer[(short) (offset + i)] ^ 0x36);
         }
-        Util.arrayFillNonAtomic(this.hmacKey, (short) (HMAC_KEY_SIZE * p1 + length), (short) (HMAC_BLOCK_SIZE - length), (byte) 0x36);
+        Util.arrayFillNonAtomic(this.hmacKeys, (short) (HMAC_KEY_SIZE * p1 + length), (short) (HMAC_BLOCK_SIZE - length), (byte) 0x36);
         for (short i = HMAC_BLOCK_SIZE; i < (short) (HMAC_BLOCK_SIZE + length); i++) {
-            this.hmacKey[(short) (HMAC_KEY_SIZE * p1 + i)] = (byte) (buffer[(short) (offset + i - HMAC_BLOCK_SIZE)] ^ 0x5C);
+            this.hmacKeys[(short) (HMAC_KEY_SIZE * p1 + i)] = (byte) (buffer[(short) (offset + i - HMAC_BLOCK_SIZE)] ^ 0x5C);
         }
-        Util.arrayFillNonAtomic(this.hmacKey, (short) (HMAC_KEY_SIZE * p1 + HMAC_BLOCK_SIZE + length), (short) (HMAC_BLOCK_SIZE - length), (byte) 0x5C);
+        Util.arrayFillNonAtomic(this.hmacKeys, (short) (HMAC_KEY_SIZE * p1 + HMAC_BLOCK_SIZE + length), (short) (HMAC_BLOCK_SIZE - length), (byte) 0x5C);
     }
 
     private short rsa_sign(byte[] buffer, short offset, short length)
@@ -266,38 +270,36 @@ public class ClientApplet extends Applet implements ExtendedLength
             length += padding;
         }
 
-        AESKey key = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
-        key.setKey(this.aesKey, (short) (AES_KEY_SIZE * p1));
+        this.aesKey.setKey(this.aesKeys, (short) (AES_KEY_SIZE * p1));
 
         if ((p2 & 0xF0) == 0x10) {
             byte[] iv = JCSystem.makeTransientByteArray(AES_BLOCK_SIZE, JCSystem.CLEAR_ON_DESELECT);
             this.random.generateData(iv, ZERO, AES_BLOCK_SIZE);
-            this.aesCipher.init(key, Cipher.MODE_ENCRYPT, iv, ZERO, AES_BLOCK_SIZE);
+            this.aesCipher.init(this.aesKey, Cipher.MODE_ENCRYPT, iv, ZERO, AES_BLOCK_SIZE);
             len = aesCipher.doFinal(buffer, offset, length, buffer, AES_BLOCK_SIZE);
             Util.arrayCopyNonAtomic(iv, ZERO, buffer, ZERO, AES_BLOCK_SIZE);
             // correct output size
             len += AES_BLOCK_SIZE;
         } else {
-            this.aesCipher.init(key, Cipher.MODE_ENCRYPT, buffer, offset, AES_BLOCK_SIZE);
+            this.aesCipher.init(this.aesKey, Cipher.MODE_ENCRYPT, buffer, offset, AES_BLOCK_SIZE);
             len = aesCipher.doFinal(buffer, (short) (offset + AES_BLOCK_SIZE), length, buffer, ZERO);
             // correct output size
             len -= AES_BLOCK_SIZE;
         }
 
-        key.clearKey();
+        this.aesKey.clearKey();
 
         return len;
     }
 
     private short aes_decrypt(byte[] buffer, short offset, short length, byte p1, byte p2)
     {
-        AESKey key = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
-        key.setKey(this.aesKey, (short) (AES_KEY_SIZE * p1));
+        this.aesKey.setKey(this.aesKeys, (short) (AES_KEY_SIZE * p1));
 
-        this.aesCipher.init(key, Cipher.MODE_DECRYPT, buffer, offset, AES_BLOCK_SIZE);
+        this.aesCipher.init(this.aesKey, Cipher.MODE_DECRYPT, buffer, offset, AES_BLOCK_SIZE);
         short len = aesCipher.doFinal(buffer, (short) (offset + AES_BLOCK_SIZE), length, buffer, ZERO);
 
-        key.clearKey();
+        this.aesKey.clearKey();
 
         if ((p2 & 0x0F) == 0x01) {
             // pkcs7 padding
@@ -331,10 +333,10 @@ public class ClientApplet extends Applet implements ExtendedLength
         byte[] outer = JCSystem.makeTransientByteArray((short) (HMAC_BLOCK_SIZE + MessageDigest.LENGTH_SHA_256), JCSystem.CLEAR_ON_DESELECT);
         // create hmac
         MessageDigest m_sha256 = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
-        Util.arrayCopyNonAtomic(this.hmacKey, (short) (HMAC_KEY_SIZE * p1), inner, ZERO, HMAC_BLOCK_SIZE);
+        Util.arrayCopyNonAtomic(this.hmacKeys, (short) (HMAC_KEY_SIZE * p1), inner, ZERO, HMAC_BLOCK_SIZE);
         Util.arrayCopyNonAtomic(buffer, offset, inner, HMAC_BLOCK_SIZE, length);
         m_sha256.doFinal(inner, ZERO, (short) inner.length, outer, HMAC_BLOCK_SIZE);
-        Util.arrayCopyNonAtomic(this.hmacKey, (short) (HMAC_KEY_SIZE * p1 + HMAC_BLOCK_SIZE), outer, ZERO, HMAC_BLOCK_SIZE);
+        Util.arrayCopyNonAtomic(this.hmacKeys, (short) (HMAC_KEY_SIZE * p1 + HMAC_BLOCK_SIZE), outer, ZERO, HMAC_BLOCK_SIZE);
         m_sha256.doFinal(outer, ZERO, (short) outer.length, buffer, ZERO);
     }
 

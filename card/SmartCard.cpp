@@ -164,7 +164,7 @@ namespace cdax {
         }
 
         if (this->debug) {
-            std::cout << "> send packet: " << data.hex() << std::endl;
+            std::cout << "> send: " << data.hex() << std::endl;
         }
 
         struct timeval end;
@@ -199,7 +199,7 @@ namespace cdax {
         delete response_buffer;
 
         if (this->debug) {
-            std::cout << "> receive packet: " << data.hex() << std::endl;
+            std::cout << "> recv: " << data.hex() << std::endl;
         }
 
         if (data[data.size() - 2] != 0x90 || data[data.size() - 1] != 0x00) {
