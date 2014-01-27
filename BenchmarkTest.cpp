@@ -11,6 +11,15 @@ using namespace cdax;
 
 CryptoPP::AutoSeededRandomPool prng;
 
+bytestring generateKey(size_t length)
+{
+    CryptoPP::AutoSeededRandomPool prng;
+    bytestring key(length);
+    prng.GenerateBlock(key.BytePtr(), key.size());
+    return key;
+}
+
+
 void throughputBenchmark()
 {
     std::cout << "> starting tests..." << std::endl;
@@ -164,14 +173,6 @@ void rsaBenchmark()
 
     card->setDebug(false);
 
-    if (card == NULL) {
-        return;
-    }
-
-    if (!card->connect()) {
-        return;
-    }
-
     // message stub
     Message msg("test_id", "test_topic", "test_data");
 
@@ -181,7 +182,19 @@ void rsaBenchmark()
     RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
 
+    CryptoPP::InvertibleRSAFunction params;
+    params.GenerateRandomWithKeySize(prng, 2048);
+    serverKeyPair = new RSAKeyPair(params);
+    clientPub = serverKeyPair->getPublic();
+
     // Generate RSA Parameters
+    if (card == NULL) {
+        return;
+    }
+
+    if (!card->connect()) {
+        return;
+    }
 
     if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
         CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
@@ -261,6 +274,75 @@ void rsaBenchmark()
 
 }
 
+void highLevelBenchmark()
+{
+    std::cout << "> starting tests..." << std::endl;
+
+    SmartCard *card = new SmartCard();
+
+    card->setDebug(true);
+
+    // message stub
+    Message msg("test_id", "test_topic", "test_data");
+
+    bytestring data;
+    int len, repeat = 10;
+
+    RSAKeyPair* serverKeyPair;
+    CryptoPP::RSA::PublicKey* clientPub;
+
+    TopicKeyPair *topic_key_pair = new TopicKeyPair(
+        generateKey(TopicKeyPair::KeyLength),
+        generateKey(TopicKeyPair::KeyLength)
+    );
+
+    // Generate RSA Parameters
+    if (card == NULL) {
+        return;
+    }
+
+    if (!card->connect()) {
+        return;
+    }
+
+    if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
+        CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
+        CryptoPP::RSA::PrivateKey* priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+
+        serverKeyPair = new RSAKeyPair(pub, priv);
+    } else {
+        CryptoPP::InvertibleRSAFunction params;
+        params.GenerateRandomWithKeySize(prng, 2048);
+        serverKeyPair = new RSAKeyPair(params);
+
+        RSAKeyPair::savePrivKey("data/server-priv.key", serverKeyPair->getPrivate());
+        RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
+    }
+
+    if (file_exists("data/client-pub.key")) {
+        clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
+    } else {
+        clientPub = card->initialize(serverKeyPair->getPublic());
+        RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
+    }
+
+    if (clientPub == NULL) {
+        std::cerr << card->getError() << std::endl;
+        return;
+    }
+
+    msg.setData(*topic_key_pair->getValue());
+    msg.encrypt(clientPub);
+    msg.sign(serverKeyPair->getPrivate());
+
+    std::cout << "HANDLE TOPIC KEY RESPONSE:" << std::endl;
+    card->startTimer();
+    for (int j = 0; j < repeat; j++) {
+        msg.handleTopicKeyResponse(card);
+    }
+    std::cout << "(" << msg.encode().size() << ", " << card->stopTimer() << ")" << std::endl;
+}
+
 /**
  * Eceute message unit tests
  * @param  argc ignored
@@ -269,9 +351,10 @@ void rsaBenchmark()
  */
 int main(int argc, char* argv[])
 {
-    throughputBenchmark();
+    // throughputBenchmark();
     // cryptoBenchmark();
     // rsaBenchmark();
+    highLevelBenchmark();
 
     return 0;
 }

@@ -49,6 +49,12 @@ namespace cdax {
         friend std::ostream &operator<< (std::ostream &out, const Message &msg);
         friend class boost::serialization::access;
 
+        void addPKCS7();
+        void removePKCS7();
+
+        bytestring generateIV(int length) const;
+        bytestring getDataLength() const;
+
         /**
          * Encode message content to boost archive model
          */
@@ -84,8 +90,6 @@ namespace cdax {
         const std::string encode() const;
 
         const bytestring getPayload() const;
-
-        bytestring generateIV(int length) const;
 
         void setId(bytestring identity);
         bytestring getId() const;
@@ -127,6 +131,9 @@ namespace cdax {
         bool aesDecrypt(SmartCard* card);
 
         bool handleTopicKeyResponse(SmartCard* card);
+
+        bool encode(SmartCard* card);
+        bool decode(SmartCard* card);
     };
 
 }

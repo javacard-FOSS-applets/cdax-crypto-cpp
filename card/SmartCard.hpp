@@ -50,6 +50,8 @@ namespace cdax {
         bool handleTopicKeyResponse(bytestring &msg);
 
         bool connect();
+        void release();
+
         CryptoPP::RSA::PublicKey* initialize(CryptoPP::RSA::PublicKey* secServerPub);
 
         bool sign(bytestring &msg);
@@ -63,6 +65,9 @@ namespace cdax {
 
         bool aesEncrypt(bytestring &msg);
         bool aesDecrypt(bytestring &msg);
+
+        bool encode(bytestring &msg);
+        bool decode(bytestring &msg);
     };
 
     struct CardException : public std::exception

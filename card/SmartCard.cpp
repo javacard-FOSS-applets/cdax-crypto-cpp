@@ -107,7 +107,7 @@ namespace cdax {
                     return false;
                 }
 
-                std::cout << "> got card: " << card << std::endl;
+                std::cout << "> got card: " << this->card << std::endl;
 
                 return true;
             }
@@ -129,6 +129,11 @@ namespace cdax {
         }
 
         return true;
+    }
+
+    void SmartCard::release()
+    {
+        SCardReleaseContext(this->context);
     }
 
     void SmartCard::startTimer()
@@ -336,7 +341,7 @@ namespace cdax {
 
     bool SmartCard::aesEncrypt(bytestring &msg)
     {
-        return this->transmit(0x30, msg, 0x00, 0x10);
+        return this->transmit(0x30, msg);
     }
 
     bool SmartCard::aesDecrypt(bytestring &msg)
@@ -348,5 +353,16 @@ namespace cdax {
     {
         return this->transmit(0x07, msg);
     }
+
+    bool SmartCard::encode(bytestring &msg)
+    {
+        return this->transmit(0x08, msg);
+    }
+
+    bool SmartCard::decode(bytestring &msg)
+    {
+        return this->transmit(0x09, msg);
+    }
+
 
 };
