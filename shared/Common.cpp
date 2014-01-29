@@ -112,9 +112,9 @@ namespace cdax {
     {
         int len = TopicKeyPair::KeyLength;
         // first TopicKeyPair::KeyLength bytes are the encyption key
-        this->encryptionKey = stringToSec(source.substr(0, len));
+        this->encryptionKey = source.substr(0, len);
         // last TopicKeyPair::KeyLength bytes are the authentication key
-        this->authenticationKey = stringToSec(source.substr(len, len));
+        this->authenticationKey = source.substr(len, len);
     }
 
     /**
@@ -144,10 +144,10 @@ namespace cdax {
         this->authenticationKey = auth_key;
     }
 
-    bytestring* TopicKeyPair::getValue()
+    bytestring TopicKeyPair::getValue()
     {
-        bytestring *buffer = new bytestring();
-        buffer->Assign(this->encryptionKey + this->authenticationKey);
+        bytestring buffer;
+        buffer.Assign(this->encryptionKey + this->authenticationKey);
         return buffer;
     }
 
@@ -157,37 +157,25 @@ namespace cdax {
      */
     std::string TopicKeyPair::toString()
     {
-        return secToString(this->encryptionKey) + secToString(this->authenticationKey);
+        return this->encryptionKey.str() + this->authenticationKey.str();
     }
 
     /**
      * Get encryption key
      * @return bytestring encryption key
      */
-    bytestring* TopicKeyPair::getEncKey()
+    bytestring TopicKeyPair::getEncKey() const
     {
-        return &this->encryptionKey;
+        return this->encryptionKey;
     }
 
     /**
      * Get the authentication key
      * @return bytestring authentication key
      */
-    bytestring* TopicKeyPair::getAuthKey()
+    bytestring TopicKeyPair::getAuthKey() const
     {
-        return &this->authenticationKey;
-    }
-
-    /**
-     * convert string to bytestring
-     * @param  str string source
-     * @return bytestring
-     */
-    bytestring stringToSec(std::string str)
-    {
-        bytestring block(str.size());
-        block.Assign((const unsigned char*) str.c_str(), str.size());
-        return block;
+        return this->authenticationKey;
     }
 
     bytestring::bytestring(std::string source)
@@ -223,6 +211,13 @@ namespace cdax {
         return std::string(this->begin(), this->end());
     }
 
+    bytestring bytestring::substr(size_t offset, size_t size)
+    {
+        bytestring result(size);
+        result.Assign(this->BytePtr() + offset, size);
+        return result;
+    }
+
     /**
      * Overload << operator, to format the content of a message
      * in an output stream. Shows the message data, sender id,
@@ -238,16 +233,6 @@ namespace cdax {
     {
         boost::hash<std::string> hasher;
         return hasher(b.str());
-    }
-
-    /**
-     * Convert bytestring to string
-     * @param  bytestring block source
-     * @return string
-     */
-    std::string secToString(bytestring block)
-    {
-        return std::string(block.begin(), block.end());
     }
 
     /**

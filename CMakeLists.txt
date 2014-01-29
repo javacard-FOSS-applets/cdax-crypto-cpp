@@ -28,30 +28,30 @@ add_executable( card_test CardTest
 )
 target_link_libraries( card_test ${LIBS} )
 
-# add_executable( simulator Main
-#     clients/Subscriber
-#     clients/Publisher
-#     clients/Client
-#     card/SmartCard
-#     servers/SecurityServer
-#     servers/Node
-#     shared/Host
-#     shared/Message
-#     shared/Common
-# )
-# target_link_libraries( simulator ${LIBS} )
+add_executable( simulator Main
+    clients/Subscriber
+    clients/Publisher
+    clients/Client
+    card/SmartCard
+    servers/SecurityServer
+    servers/Node
+    shared/Host
+    shared/Message
+    shared/Common
+)
+target_link_libraries( simulator ${LIBS} )
 
-# add_executable( msg_test MessageTest
-#     card/SmartCard
-#     shared/Message
-#     shared/Common
-# )
-# target_link_libraries( msg_test ${LIBS} )
+add_executable( msg_test MessageTest
+    card/SmartCard
+    shared/Message
+    shared/Common
+)
+target_link_libraries( msg_test ${LIBS} )
 
-# add_executable( benchmark_test BenchmarkTest
-#     card/SmartCard
-#     shared/Message
-#     shared/Common
-# )
-# target_link_libraries( benchmark_test ${LIBS} )
+add_executable( benchmark_test BenchmarkTest
+    card/SmartCard
+    shared/Message
+    shared/Common
+)
+target_link_libraries( benchmark_test ${LIBS} )
 

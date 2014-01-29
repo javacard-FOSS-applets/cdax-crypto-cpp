@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <unistd.h>
+#include <fstream>
 
 #include "card/SmartCard.hpp"
 #include "shared/Message.hpp"
@@ -10,6 +11,7 @@
 using namespace cdax;
 
 CryptoPP::AutoSeededRandomPool prng;
+const std::string DIRECTORY = "../../../paper/shapes/data/";
 
 bytestring generateKey(size_t length)
 {
@@ -17,6 +19,23 @@ bytestring generateKey(size_t length)
     bytestring key(length);
     prng.GenerateBlock(key.BytePtr(), key.size());
     return key;
+}
+
+void logTime(std::ofstream& file, SmartCard *card, int len)
+{
+    file << len << "\t" << card->getTimerMean() << "\t" << card->getTimerStdev() << std::endl;
+    std::cout << "> " << len << " in " << card->getTimerMean() << " +- " << card->getTimerStdev() << std::endl;
+}
+
+void openLogFile(std::ofstream& file, const std::string name)
+{
+    if (file.is_open()) {
+        file << std::endl;
+        file.close();
+    }
+
+    file.open (DIRECTORY + name);
+    file << "bytes\tmilliseconds\terror" << std::endl;
 }
 
 
@@ -37,25 +56,31 @@ void throughputBenchmark()
     }
 
     bytestring data;
-    int len, repeat = 10, max = 25;
+    // 16 * 64 = 1024 bytes
+    int len, start = 0, repeat = 2, step = 16, max = 64;
     byte p1, p2;
 
-    std::cout << "Sending:" << std::endl;
+    std::ofstream file;
+    openLogFile(file, "transmit.dat");
 
-    for (int i = 0; i <= max; i++) {
-        len = 50 * i;
+    std::cout << "Transmitting:" << std::endl;
+
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j <= repeat; j++) {
             data.resize(len);
             card->transmit(0x05, data);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
+
+    openLogFile(file, "receive.dat");
 
     std::cout << "Receiving:" << std::endl;
 
-    for (int i = 0; i <= max; i++) {
-        len = 50 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j <= repeat; j++) {
             data.resize(0);
@@ -63,13 +88,15 @@ void throughputBenchmark()
             p2 = len & 0xff;
             card->transmit(0x06, data, p1, p2);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
+
+    openLogFile(file, "tranceive.dat");
 
     std::cout << "Tranceiving:" << std::endl;
 
-    for (int i = 0; i <= max; i++) {
-        len = 50 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j <= repeat; j++) {
             data.resize(len);
@@ -77,8 +104,11 @@ void throughputBenchmark()
             p2 = len & 0xff;
             card->transmit(0x06, data, p1, p2);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
+
+    file << std::endl;
+    file.close();
 
 }
 
@@ -102,8 +132,8 @@ void cryptoBenchmark()
     Message msg("test_id", "test_topic", "test_data");
 
     // key
-    bytestring* key = new bytestring(16);
-    prng.GenerateBlock(key->BytePtr(), key->size());
+    bytestring key(16);
+    prng.GenerateBlock(key.BytePtr(), key.size());
 
     if (!card->storeTopicKey(key)) {
         std::cerr << "Could not store sym key on card" << std::endl;
@@ -111,57 +141,70 @@ void cryptoBenchmark()
     }
 
     bytestring data;
-    int len, repeat = 10;
+    // 16 * 64 = 1024 bytes
+    int len, start = 1, repeat = 10, step = 16, max = 64;
+
+    std::ofstream file;
+    openLogFile(file, "hmac.dat");
 
     std::cout << "HMAC:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
             msg.hmac(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
 
+    openLogFile(file, "hmac_verify.dat");
+
     std::cout << "HMAC Verify:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.hmac(key);
+            msg.hmac(&key);
             msg.hmacVerify(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
 
+    openLogFile(file, "aes_enc.dat");
+
     std::cout << "AES ENCRYPT:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
             msg.aesEncrypt(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
 
+    openLogFile(file, "aes_dec.dat");
+
     std::cout << "AES DECRYPT:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.aesEncrypt(key);
+            msg.aesEncrypt(&key);
             msg.aesDecrypt(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
+
+    file << std::endl;
+    file.close();
 
 }
 
@@ -177,7 +220,9 @@ void rsaBenchmark()
     Message msg("test_id", "test_topic", "test_data");
 
     bytestring data;
-    int len, repeat = 10;
+    // the maximum for this public key is 245 bytes (8 * 30 = 240)
+    int len, start = 1, repeat = 2, step = 8, max = 30;
+    std::ofstream file;
 
     RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
@@ -222,21 +267,25 @@ void rsaBenchmark()
         return;
     }
 
+    openLogFile(file, "rsa_sign.dat");
+
     std::cout << "RSA SIGN:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
             msg.sign(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
 
+    openLogFile(file, "rsa_verify.dat");
+
     std::cout << "RSA VERIFY:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
@@ -244,24 +293,28 @@ void rsaBenchmark()
             msg.sign(serverKeyPair->getPrivate());
             msg.verify(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
 
+    openLogFile(file, "rsa_enc.dat");
+
     std::cout << "RSA ENCRYPT:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
             msg.encrypt(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
 
+    openLogFile(file, "rsa_dec.dat");
+
     std::cout << "RSA DECCRYPT:" << std::endl;
-    for (int i = 1; i <= 30; i++) {
-        len = 10 * i;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
         card->startTimer();
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
@@ -269,9 +322,11 @@ void rsaBenchmark()
             msg.encrypt(clientPub);
             msg.decrypt(card);
         }
-        std::cout << "(" << len << ", " << card->stopTimer() << ")" << std::endl;
+        logTime(file, card, len);
     }
 
+    file << std::endl;
+    file.close();
 }
 
 void highLevelBenchmark()
@@ -280,13 +335,14 @@ void highLevelBenchmark()
 
     SmartCard *card = new SmartCard();
 
-    card->setDebug(true);
+    card->setDebug(false);
 
     // message stub
     Message msg("test_id", "test_topic", "test_data");
 
     bytestring data;
-    int len, repeat = 10;
+    int len, start = 1, repeat = 2, step = 16, max = 64;
+    std::ofstream file;
 
     RSAKeyPair* serverKeyPair;
     CryptoPP::RSA::PublicKey* clientPub;
@@ -331,16 +387,67 @@ void highLevelBenchmark()
         return;
     }
 
+    msg.setData("topic_join");
+    len = msg.getPayload().size();
+
+    openLogFile(file, "topic_key_request.dat");
+
+    std::cout << "SIGN TOPIC KEY REQUEST:" << std::endl;
+    card->startTimer();
+    for (int j = 0; j < repeat; j++) {
+        msg.sign(card);
+    }
+    logTime(file, card, len);
+
     msg.setData(*topic_key_pair->getValue());
     msg.encrypt(clientPub);
     msg.sign(serverKeyPair->getPrivate());
+    len = msg.getPayload().size();
+
+    openLogFile(file, "topic_key_response.dat");
 
     std::cout << "HANDLE TOPIC KEY RESPONSE:" << std::endl;
     card->startTimer();
     for (int j = 0; j < repeat; j++) {
         msg.handleTopicKeyResponse(card);
     }
-    std::cout << "(" << msg.encode().size() << ", " << card->stopTimer() << ")" << std::endl;
+    logTime(file, card, len);
+
+    msg.setSignature("");
+
+    openLogFile(file, "topic_encode.dat");
+
+    std::cout << "TOPIC ENCODE:" << std::endl;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
+        card->startTimer();
+        for (int j = 0; j < repeat; j++) {
+            data.resize(len);
+            msg.setData(data);
+            msg.encode(card);
+        }
+        logTime(file, card, len);
+    }
+
+    openLogFile(file, "topic_decode.dat");
+
+    std::cout << "TOPIC DECODE:" << std::endl;
+    for (int i = start; i <= max; i++) {
+        len = step * i;
+        card->startTimer();
+        for (int j = 0; j < repeat; j++) {
+            data.resize(len);
+            msg.setData(data);
+            msg.aesEncrypt(topic_key_pair->getEncKey());
+            msg.hmac(topic_key_pair->getAuthKey());
+            msg.decode(card);
+        }
+        logTime(file, card, len);
+    }
+
+    file << std::endl;
+    file.close();
+
 }
 
 /**
@@ -354,7 +461,7 @@ int main(int argc, char* argv[])
     // throughputBenchmark();
     // cryptoBenchmark();
     // rsaBenchmark();
-    highLevelBenchmark();
+    // highLevelBenchmark();
 
     return 0;
 }

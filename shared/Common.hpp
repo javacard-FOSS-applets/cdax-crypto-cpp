@@ -33,8 +33,11 @@ namespace cdax {
 
         bytestring(std::string source);
         bytestring(const char* source);
+
         const std::string hex() const;
         const std::string str() const;
+
+        bytestring substr(size_t offset, size_t size);
 
         void clear();
     };
@@ -91,15 +94,12 @@ namespace cdax {
         TopicKeyPair(bytestring source);
         TopicKeyPair(bytestring enc_key, bytestring auth_key);
 
-        bytestring* getEncKey();
-        bytestring* getAuthKey();
-        bytestring* getValue();
+        bytestring getEncKey() const;
+        bytestring getAuthKey() const;
 
+        bytestring getValue();
         std::string toString();
     };
-
-    bytestring stringToSec(std::string str);
-    std::string secToString(bytestring block);
 
     std::string hex(byte val[], size_t len);
     std::string hex(std::string val);

@@ -171,11 +171,11 @@ namespace cdax {
      * Encrypt the message topic data using AES CBC and a fresh random IV
      * @param bytestring key encryption key
      */
-    void Message::aesEncrypt(bytestring* key)
+    void Message::aesEncrypt(const bytestring key)
     {
         bytestring iv = this->generateIV(CryptoPP::AES::BLOCKSIZE);
         std::string ciphertext;
-        CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key->BytePtr(), key->size(), iv);
+        CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encrypt(key.BytePtr(), key.size(), iv);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
         CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(encrypt, ss);
         CryptoPP::StringSource(this->data.str(), true, enc);
@@ -189,13 +189,13 @@ namespace cdax {
      * @param  bytestring key AES key
      * @return bool true if decryption was successful
      */
-    bool Message::aesDecrypt(bytestring* key)
+    bool Message::aesDecrypt(const bytestring key)
     {
         try {
             std::string plaintext;
             bytestring iv = this->data.str().substr(0, CryptoPP::AES::BLOCKSIZE);
             bytestring ciphertext = this->data.str().substr(CryptoPP::AES::BLOCKSIZE);
-            CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key->BytePtr(), key->size(), iv);
+            CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decrypt(key.BytePtr(), key.size(), iv);
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::StreamTransformationFilter* enc = new CryptoPP::StreamTransformationFilter(decrypt, ss);
             CryptoPP::StringSource(ciphertext.str(), true, enc);
@@ -212,10 +212,10 @@ namespace cdax {
      * topic name, topic data and possibly the encryption IV as payload data
      * @param bytestring key HMAC key
      */
-    void Message::hmac(bytestring* key)
+    void Message::hmac(const bytestring key)
     {
         std::string sig;
-        CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
+        CryptoPP::HMAC<CryptoPP::SHA256> hmac(key.BytePtr(), key.size());
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::HashFilter *hf = new CryptoPP::HashFilter(hmac, ss);
         CryptoPP::StringSource(this->getPayload().str(), true, hf);
@@ -227,10 +227,10 @@ namespace cdax {
      * @param  bytestring key HMAC key
      * @return bool true if the verification was successful
      */
-    bool Message::hmacVerify(bytestring* key)
+    bool Message::hmacVerify(const bytestring key)
     {
         try {
-            CryptoPP::HMAC<CryptoPP::SHA256> hmac(key->BytePtr(), key->size());
+            CryptoPP::HMAC<CryptoPP::SHA256> hmac(key.BytePtr(), key.size());
             const int flags = CryptoPP::HashVerificationFilter::THROW_EXCEPTION | CryptoPP::HashVerificationFilter::HASH_AT_END;
             CryptoPP::HashVerificationFilter *hvf = new CryptoPP::HashVerificationFilter(hmac, NULL, flags);
             CryptoPP::StringSource(this->getPayload().str() + this->signature.str(), true, hvf);
@@ -387,8 +387,9 @@ namespace cdax {
 
     bool Message::hmacVerify(SmartCard* card)
     {
-        bytestring buffer = this->getPayload();
-        buffer.Assign(buffer + this->getSignature());
+        bytestring buffer;
+        buffer += this->getPayload();
+        buffer += this->getSignature();
         return card->hmacVerify(buffer);
     }
 

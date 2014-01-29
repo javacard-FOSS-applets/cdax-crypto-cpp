@@ -5,6 +5,8 @@
 #include <string>
 #include <ctime>
 #include <sys/time.h>
+#include <vector>
+#include <numeric>
 
 #include <cryptopp/rsa.h>
 
@@ -24,18 +26,17 @@ namespace cdax {
         PCSC_API::DWORD active_protocol;
 
         std::string last_error;
-        char* reader;
+        std::string reader;
 
         bool debug = false;
-
-        double timer = 0;
-        double counter = 0;
+        std::vector<double> timer;
 
         bool selectReader();
         bool waitForCard();
     public:
         void startTimer();
-        double stopTimer();
+        double getTimerMean();
+        double getTimerStdev();
 
         bool selectApplet();
         std::string getError();
@@ -44,7 +45,7 @@ namespace cdax {
 
         bool transmit(byte instruction, bytestring &data, byte p1 = 0x00, byte p2 = 0x00);
 
-        bool storeTopicKey(bytestring* key);
+        bool storeTopicKey(bytestring key);
         bool storePrivateKey(CryptoPP::RSA::PrivateKey* privKey);
 
         bool handleTopicKeyResponse(bytestring &msg);

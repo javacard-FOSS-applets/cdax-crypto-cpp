@@ -13,7 +13,12 @@ const std::string line = std::string(80, '#');
 
 // pseudo random number generator
 CryptoPP::AutoSeededRandomPool prng;
+RSAKeyPair* serverKeyPair;
+CryptoPP::RSA::PublicKey* clientPub;
+SmartCard *card = new SmartCard();
 
+// create message
+Message msg("test_id", "test_topic", "test_data");
 
 void log(std::string msg)
 {
@@ -25,201 +30,157 @@ void log(std::string msg)
  * @param  int length
  * @return bytestring
  */
-bytestring* generateKey(size_t length)
+bytestring generateKey(size_t length)
 {
     CryptoPP::AutoSeededRandomPool prng;
-    bytestring* key = new bytestring(length);
-    prng.GenerateBlock(key->BytePtr(), key->size());
+    bytestring key(length);
+    prng.GenerateBlock(key.BytePtr(), key.size());
     return key;
 }
 
+TopicKeyPair topic_key_pair(
+    generateKey(TopicKeyPair::KeyLength),
+    generateKey(TopicKeyPair::KeyLength)
+);
 
 void signatuteTest()
 {
     log("> starting tests...");
 
-    SmartCard *card = new SmartCard();
+    // Generate RSA Parameters
+    // generateRSA(serverKeyPair, clientPub, card);
 
-    if (card == NULL) {
-        return;
+    msg.sign(card);
+    log("> message signed on card");
+
+    if (msg.verify(clientPub)) {
+        log("> signature verified");
     }
 
-    card->setDebug(true);
+    msg.sign(serverKeyPair->getPrivate());
+    log("> message signed");
 
-
-    if (!card->connect()) {
-        return;
+    if (msg.verify(card)) {
+        log("> signature verified on card");
     }
+}
 
-    RSAKeyPair* serverKeyPair;
-    CryptoPP::RSA::PublicKey* clientPub;
-
-    // create message
-    Message msg("test_id", "test_topic", "test_data");
-
-    TopicKeyPair *topic_key_pair = new TopicKeyPair(
-        *generateKey(TopicKeyPair::KeyLength),
-        *generateKey(TopicKeyPair::KeyLength)
-    );
+void encryptionRSATest()
+{
+    log("> starting tests...");
 
     // Generate RSA Parameters
+    // generateRSA(serverKeyPair, clientPub, card);
 
-    // if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
-    //     CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
-    //     CryptoPP::RSA::PrivateKey* priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+    msg.encrypt(card);
+    log("> message encrypted on card");
 
-    //     serverKeyPair = new RSAKeyPair(pub, priv);
-    // } else {
-    //     CryptoPP::InvertibleRSAFunction params;
-    //     params.GenerateRandomWithKeySize(prng, 2048);
-    //     serverKeyPair = new RSAKeyPair(params);
+    if (msg.decrypt(serverKeyPair->getPrivate())) {
+        log("> message decrypted");
+    }
 
-    //     RSAKeyPair::savePrivKey("data/server-priv.key", serverKeyPair->getPrivate());
-    //     RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
-    // }
+    msg.encrypt(clientPub);
+    log("> message encrypted");
 
+    if (msg.decrypt(card)) {
+        log("> message decrypted on card");
+    }
+}
 
-    // if (file_exists("data/client-pub.key")) {
-    //     clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
-    // } else {
-    //     clientPub = card->initialize(serverKeyPair->getPublic());
-    //     RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
-    // }
+void encryptionAESTest()
+{
+    log("> starting tests...");
 
-    // if (clientPub == NULL) {
-    //     log(card->getError());
-    //     return;
-    // }
+    std::cout << "> key: " << topic_key_pair.getEncKey().hex() << std::endl;
 
-    // msg.sign(card);
-    // log("> message signed on card");
+    card->storeTopicKey(topic_key_pair.getValue());
 
-    // if (msg.verify(clientPub)) {
-    //     log("> signature verified");
-    // }
+    log("> stored key on card");
 
-    // msg.sign(serverKeyPair->getPrivate());
-    // log("> message signed");
+    msg.aesEncrypt(topic_key_pair.getEncKey());
+    log("> message encrypted");
 
-    // if (msg.verify(card)) {
-    //     log("> signature verified on card");
-    // }
+    msg.aesDecrypt(card);
+    log("> message decrypted on card");
 
-    // msg.encrypt(serverKeyPair->getPublic());
-    // log("> message encrypted");
-    // std::cout << msg;
+    msg.aesEncrypt(card);
+    log("> message encrypted on card");
 
-    // msg.setData("test_data");
+    msg.aesDecrypt(topic_key_pair.getEncKey());
+    log("> message decrypted");
 
-    // msg.encrypt(card);
-    // log("> message encrypted on card");
-    // std::cout << msg;
+}
 
-    // if (msg.decrypt(serverKeyPair->getPrivate())) {
-    //     log("> message decrypted");
-    //     std::cout << msg;
-    // }
+void hmacTest()
+{
+    log("> starting tests...");
 
-    // msg.encrypt(clientPub);
-    // log("> message encrypted");
-    // std::cout << msg;
+    card->storeTopicKey(topic_key_pair.getValue());
 
-    // if (msg.decrypt(card)) {
-    //     log("> message decrypted on card");
-    //     std::cout << msg;
-    // }
+    msg.hmac(topic_key_pair.getAuthKey());
+    std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
 
-    // std::cout << "> key: " << topic_key_pair->getEncKey()->hex() << std::endl;
+    if (msg.hmacVerify(card)) {
+        log("> messaged hmac verified on card");
+    }
 
-    // if (card->storeTopicKey(topic_key_pair->getValue())) {
-    //     log("> stored key on card");
+    msg.hmac(card);
+    std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
 
-    //     msg.aesEncrypt(topic_key_pair->getEncKey());
-    //     log("> message encrypted");
-    //     std::cout << msg;
+    if (msg.hmacVerify(topic_key_pair.getAuthKey())) {
+        log("> messaged hmac verified");
+    }
+}
 
-    //     msg.aesDecrypt(card);
-    //     log("> message decrypted on card");
-    //     std::cout << msg;
+void testHighLevel()
+{
+    log("> starting tests...");
 
-    //     msg.aesEncrypt(card);
-    //     log("> message encrypted on card");
-    //     std::cout << msg;
+    // Generate RSA Parameters
+    // generateRSA(serverKeyPair, clientPub, card);
 
-    //     msg.aesDecrypt(topic_key_pair->getEncKey());
-    //     log("> message decrypted");
-    //     std::cout << msg;
+    // test topic join response
+    msg.setData(*topic_key_pair.getValue());
+    msg.encrypt(clientPub);
+    msg.sign(serverKeyPair->getPrivate());
 
-    //     std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
+    std::cout << "> topic key pair: " << topic_key_pair.getValue().hex() << std::endl;
 
-    //     msg.hmac(topic_key_pair->getAuthKey());
-    //     std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
+    msg.handleTopicKeyResponse(card);
+    log("> topic join response processed on card");
 
-    //     std::cout << "> key: " << topic_key_pair->getAuthKey()->hex() << std::endl;
-
-    //     if (msg.hmacVerify(card)) {
-    //         log("> messaged hmac verified on card");
-    //     }
-
-    //     msg.hmac(card);
-    //     std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
-
-    //     if (msg.hmacVerify(topic_key_pair->getAuthKey())) {
-    //         log("> messaged hmac verified");
-    //     } else {
-    //         log("> could not verify message hmac");
-    //     }
-    // }
-
-    // topic join response
-    // msg.setData(*topic_key_pair->getValue());
-    // msg.encrypt(clientPub);
-    // msg.sign(serverKeyPair->getPrivate());
-
-    // std::cout << "> topic key pair: " << topic_key_pair->getValue()->hex() << std::endl;
-
-    // msg.handleTopicKeyResponse(card);
-
-    // msg.setData("hello");
-
-    // msg.hmac(topic_key_pair->getAuthKey());
-    // std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
-
-    // msg.hmac(topic_key_pair->getAuthKey());
-    // std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
-
-    // msg.aesEncrypt(topic_key_pair->getEncKey());
-    // msg.aesDecrypt(card);
-
-    // if (msg.hmacVerify(card)) {
-    //     log("> messaged hmac verified on card");
-    // }
-
-    std::cout << msg;
-
-    card->storeTopicKey(topic_key_pair->getValue());
-
-    // for (int i = 0; i < 1; i++) {
-    //     msg.hmac(card);
-
-    //     if (!msg.hmacVerify(topic_key_pair->getAuthKey())) {
-    //         std::cout << "ERROR!!!!!!";
-    //     }
-    // }
-
-    // for (int i = 0; i < 1; i++) {
-    //     msg.aesEncrypt(card);
-
-    //     if (!msg.aesDecrypt(topic_key_pair->getEncKey())) {
-    //         std::cout << "ERROR!!!!!!";
-    //     }
-    // }
+    // test encode and decode
+    msg.setData("hello");
 
     msg.encode(card);
+    log("> message encoded on card");
     std::cout << msg;
 
     msg.decode(card);
+    log("> message decoded on card");
     std::cout << msg;
+
+}
+
+void tmp()
+{
+    log("> starting tests...");
+
+    card->setDebug(true);
+
+    card->storeTopicKey(topic_key_pair.getValue());
+
+    bytestring data(600);
+    prng.GenerateBlock(data.BytePtr(), data.size());
+    msg.setData(data);
+
+    msg.hmac(topic_key_pair.getAuthKey());
+
+    std::cout << msg;
+
+    card->startTimer();
+    msg.hmacVerify(card);
+    std::cout << "That took: " << card->getTimerMean() << std::endl;
 }
 
 /**
@@ -230,7 +191,40 @@ void signatuteTest()
  */
 int main(int argc, char* argv[])
 {
-    signatuteTest();
+    card->setDebug(false);
+    card->connect();
+
+    if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
+        CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
+        CryptoPP::RSA::PrivateKey* priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+
+        serverKeyPair = new RSAKeyPair(pub, priv);
+    } else {
+        CryptoPP::InvertibleRSAFunction params;
+        params.GenerateRandomWithKeySize(prng, 2048);
+        serverKeyPair = new RSAKeyPair(params);
+
+        RSAKeyPair::savePrivKey("data/server-priv.key", serverKeyPair->getPrivate());
+        RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
+    }
+
+    if (file_exists("data/client-pub.key") || false) {
+        clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
+    } else {
+        clientPub = card->initialize(serverKeyPair->getPublic());
+        RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
+    }
+
+    if (clientPub == NULL) {
+        log(card->getError());
+    }
+
+    // signatuteTest();
+    // encryptionRSATest();
+    // encryptionAESTest();
+    // hmacTest();
+    // testHighLevel();
+    tmp();
 
     return 0;
 }

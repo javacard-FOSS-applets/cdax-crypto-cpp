@@ -106,11 +106,11 @@ namespace cdax {
         void setSignature(bytestring sig);
         bytestring getSignature() const;
 
-        void aesEncrypt(bytestring* key);
-        bool aesDecrypt(bytestring* key);
+        void aesEncrypt(const bytestring key);
+        bool aesDecrypt(const bytestring key);
 
-        void hmac(bytestring* key);
-        bool hmacVerify(bytestring* key);
+        void hmac(const bytestring key);
+        bool hmacVerify(const bytestring key);
 
         void encrypt(CryptoPP::RSA::PublicKey* key);
         bool decrypt(CryptoPP::RSA::PrivateKey* key);

@@ -24,33 +24,22 @@ namespace cdax {
         }
 
         // list readers
-        LPSTR readers_string;
         DWORD readers_string_len;
 
         rv = SCardListReaders(this->context, NULL, NULL, &readers_string_len);
-        readers_string = new char[readers_string_len + 1];
-        rv = SCardListReaders(this->context, NULL, readers_string, &readers_string_len);
+        this->reader.resize(readers_string_len + 1, '\0');
+        rv = SCardListReaders(this->context, NULL, &this->reader[0], &readers_string_len);
 
         if (rv != SCARD_S_SUCCESS) {
-            delete readers_string;
             this->last_error = pcsc_stringify_error(rv);
             return false;
         }
 
         // get friendly name of first reader
-        size_t reader_string_len = strlen(readers_string);
-
-        if (reader_string_len == 0) {
-            delete readers_string;
+        if (this->reader.size() == 0) {
             this->last_error = pcsc_stringify_error(rv);
             return false;
         }
-
-        // get first reader string
-        this->reader = new char[reader_string_len + 1];
-        strcpy(this->reader, readers_string);
-
-        delete readers_string;
 
         std::cout << "> card reader: " << this->reader << std::endl;
 
@@ -68,7 +57,7 @@ namespace cdax {
 
         LONG rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &this->context);
 
-        reader_states[0].szReader = this->reader;
+        reader_states[0].szReader = &(this->reader[0]);
         reader_states[0].dwCurrentState = SCARD_STATE_UNAWARE;
 
         if (rv != SCARD_S_SUCCESS) {
@@ -94,7 +83,7 @@ namespace cdax {
 
                 rv = SCardConnect(
                     this->context,
-                    this->reader,
+                    &(this->reader[0]),
                     SCARD_SHARE_SHARED,
                     SCARD_PROTOCOL_T1,
                     &this->card,
@@ -138,20 +127,27 @@ namespace cdax {
 
     void SmartCard::startTimer()
     {
-        this->timer = 0;
-        this->counter = 0;
+        this->timer.clear();
     }
 
-    double SmartCard::stopTimer()
+    double SmartCard::getTimerMean()
     {
-        return this->timer / this->counter;
+        double sum = std::accumulate(this->timer.begin(), this->timer.end(), 0.0);
+        return sum / this->timer.size();
+    }
+
+    double SmartCard::getTimerStdev()
+    {
+        double mean = this->getTimerMean();
+        double sq_sum = std::inner_product(this->timer.begin(), this->timer.end(), this->timer.begin(), 0.0);
+        return std::sqrt(sq_sum / this->timer.size() - mean * mean);
     }
 
     bool SmartCard::transmit(byte instruction, bytestring &data, byte p1, byte p2)
     {
         SCARD_IO_REQUEST pioRecvPci;
-        DWORD resp_buf_len = 4096;
-        byte* response_buffer = new byte[resp_buf_len];
+        DWORD resp_buf_len = 2048;
+        bytestring response_buffer(resp_buf_len);
 
         if (instruction != 0x00) {
             bytestring header(7);
@@ -174,7 +170,6 @@ namespace cdax {
 
         struct timeval end;
         struct timeval start;
-
         gettimeofday(&start, NULL);
 
         LONG rv = SCardTransmit(
@@ -183,25 +178,22 @@ namespace cdax {
             data.BytePtr(),
             data.SizeInBytes(),
             &pioRecvPci,
-            response_buffer,
+            response_buffer.BytePtr(),
             &resp_buf_len
         );
 
-        double elapsed = 0.0;
-
         gettimeofday(&end, NULL);
+        double elapsed = 0.0;
         elapsed = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-
-        this->timer += elapsed;
-        this->counter++;
+        this->timer.push_back(elapsed);
 
         if (rv != SCARD_S_SUCCESS) {
             this->last_error = pcsc_stringify_error(rv);
             return false;
         }
 
-        data.Assign(response_buffer, resp_buf_len);
-        delete response_buffer;
+        data.Assign(response_buffer.BytePtr(), resp_buf_len);
+        // data = response_buffer;
 
         if (this->debug) {
             std::cout << "> recv: " << data.hex() << std::endl;
@@ -216,9 +208,10 @@ namespace cdax {
         return true;
     }
 
-    bool SmartCard::storeTopicKey(bytestring* key)
+    bool SmartCard::storeTopicKey(bytestring key)
     {
-        return this->transmit(0x03, *key);
+        bytestring *tmp_key = new bytestring(key);
+        return this->transmit(0x03, *tmp_key);
     }
 
     bool SmartCard::storePrivateKey(CryptoPP::RSA::PrivateKey* privKey)
