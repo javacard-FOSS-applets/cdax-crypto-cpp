@@ -115,10 +115,10 @@ namespace cdax {
      * The defined host color is used
      * @param string text
      */
-    void Host::log(std::string text)
+    void Host::log(const std::string text)
     {
         boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
-        std::cout << this->color << this->id << " " << text << std::endl;
+        std::cout << this->color << this->id.str() << " " << text << std::endl;
     }
 
     /**
@@ -127,9 +127,9 @@ namespace cdax {
      * @param string text
      * @param Message message
      */
-    void Host::log(std::string text, Message msg)
+    void Host::log(const std::string text, Message msg)
     {
         boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
-        std::cout << this->color << this->id << " " << text << std::endl << msg;
+        std::cout << this->color << this->id.str() << " " << text << std::endl << msg;
     }
 }

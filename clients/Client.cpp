@@ -57,7 +57,7 @@ namespace cdax {
      * Set security server public key to verify topic join reponses
      * @param CryptoPP::RSA::PublicKey key security server public key
      */
-    void Client::setServer(CryptoPP::RSA::PublicKey *key)
+    void Client::setServer(CryptoPP::RSA::PublicKey key)
     {
         this->sec_server_key = key;
     }

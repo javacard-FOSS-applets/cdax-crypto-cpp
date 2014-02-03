@@ -46,14 +46,14 @@ namespace cdax {
         bool transmit(byte instruction, bytestring &data, byte p1 = 0x00, byte p2 = 0x00);
 
         bool storeTopicKey(bytestring key);
-        bool storePrivateKey(CryptoPP::RSA::PrivateKey* privKey);
+        bool storePrivateKey(CryptoPP::RSA::PrivateKey privKey);
 
-        bool handleTopicKeyResponse(bytestring &msg);
+        bool handleTopicKeyResponse(bytestring &msg, size_t key_index);
 
         bool connect();
         void release();
 
-        CryptoPP::RSA::PublicKey* initialize(CryptoPP::RSA::PublicKey* secServerPub);
+        CryptoPP::RSA::PublicKey initialize(CryptoPP::RSA::PublicKey secServerPub);
 
         bool sign(bytestring &msg);
         bool verify(bytestring &msg);
@@ -67,8 +67,8 @@ namespace cdax {
         bool aesEncrypt(bytestring &msg);
         bool aesDecrypt(bytestring &msg);
 
-        bool encode(bytestring &msg);
-        bool decode(bytestring &msg);
+        bool encode(bytestring &msg, size_t key_index);
+        bool decode(bytestring &msg, size_t key_index);
     };
 
     struct CardException : public std::exception

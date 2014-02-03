@@ -61,7 +61,7 @@ namespace cdax {
      * Set the list of clients and their respective public keys
      * @param client_keys
      */
-    void Node::setClients(boost::unordered_map<bytestring, CryptoPP::RSA::PublicKey*> client_keys)
+    void Node::setClients(boost::unordered_map<bytestring, CryptoPP::RSA::PublicKey> client_keys)
     {
         this->clients = client_keys;
     }
@@ -71,7 +71,7 @@ namespace cdax {
      * @param string port
      * @param string server_public_key
      */
-    void Node::setServer(std::string port, CryptoPP::RSA::PublicKey *server_public_key)
+    void Node::setServer(std::string port, CryptoPP::RSA::PublicKey server_public_key)
     {
         this->sec_server_port = port;
         this->sec_server_key = server_public_key;
@@ -153,7 +153,7 @@ namespace cdax {
         }
 
         // verify topic data HMAC
-        if (!msg.hmacVerify(&this->topic_keys[msg.getTopic()])) {
+        if (!msg.hmacVerify(this->topic_keys[msg.getTopic()])) {
 
             this->log("could not verify:", msg);
 

@@ -29,28 +29,33 @@ namespace cdax {
     void Message::decode(std::string encoded)
     {
         // decode fields based on length in header
-        size_t offset = 4;
+        size_t offset = 5;
         this->setId(encoded.substr(offset, encoded[0] & 0xFF));
         offset += encoded[0] & 0xFF;
         this->setTopic(encoded.substr(offset, encoded[1] & 0xFF));
         offset += encoded[1] & 0xFF;
         this->setTimestamp(encoded.substr(offset, encoded[2] & 0xFF));
         offset += encoded[2] & 0xFF;
-        this->setSignature(encoded.substr(offset, encoded[3] & 0xFF));
-        offset += encoded[3] & 0xFF;
+        size_t sig_len = 0;
+        sig_len += (encoded[3] & 0xFF) << 8;
+        sig_len += encoded[4] & 0xFF;
+        this->setSignature(encoded.substr(offset, sig_len));
+        offset += sig_len;
         this->setData(encoded.substr(offset, encoded.size() - offset));
     }
 
     const std::string Message::encode() const
     {
-        bytestring buffer(4);
+        bytestring buffer(5);
 
         // create header with field lengths
         bytestring message_timestamp = this->getTimestamp();
         buffer[0] = this->id.size();
         buffer[1] = this->topic.size();
         buffer[2] = message_timestamp.size();
-        buffer[3] = this->signature.size();
+        size_t sig_len = this->signature.size();
+        buffer[3] = (sig_len >> 8) & 0xFF;
+        buffer[4] = sig_len & 0xFF;
 
         // assign fields
         buffer += this->id;
@@ -88,7 +93,7 @@ namespace cdax {
      * Get the sender identity
      * @return string identity
      */
-    bytestring Message::getId() const
+    const bytestring Message::getId() const
     {
         return this->id;
     }
@@ -106,7 +111,7 @@ namespace cdax {
      * Get the topic name
      * @return string topic name
      */
-    bytestring Message::getTopic() const
+    const bytestring Message::getTopic() const
     {
         return this->topic;
     }
@@ -124,7 +129,7 @@ namespace cdax {
      * Get the message topic data/payload
      * @return string topic data
      */
-    bytestring Message::getData() const
+    const bytestring Message::getData() const
     {
         return this->data;
     }
@@ -139,7 +144,7 @@ namespace cdax {
     }
 
     // convert timestamp (64 bit uint) to byte array
-    bytestring Message::getTimestamp() const
+    const bytestring Message::getTimestamp() const
     {
         size_t time_len = sizeof(this->timestamp);
         bytestring message_timestamp(time_len);
@@ -147,6 +152,11 @@ namespace cdax {
             message_timestamp[time_len - 1 - i] = (this->timestamp >> (i * 8)) & 0xFF;
         }
         return message_timestamp;
+    }
+
+    const std::time_t Message::getRawTimestamp() const
+    {
+        return this->timestamp;
     }
 
     /**
@@ -162,7 +172,7 @@ namespace cdax {
      * Get the message signature or HMAC code as a string
      * @return string HMAC or RSA signature
      */
-    bytestring Message::getSignature() const
+    const bytestring Message::getSignature() const
     {
         return this->signature;
     }
@@ -245,12 +255,12 @@ namespace cdax {
      * Encrypt the message payload data with RSA RSAES OAEP SHA
      * @param CryptoPP::RSA::PublicKey key the RSA public key to use
      */
-    void Message::encrypt(CryptoPP::RSA::PublicKey* key)
+    void Message::encrypt(const CryptoPP::RSA::PublicKey key)
     {
         std::string ciphertext;
         CryptoPP::AutoSeededRandomPool prng;
 
-        CryptoPP::RSAES_PKCS1v15_Encryptor encryptor(*key);
+        CryptoPP::RSAES_PKCS1v15_Encryptor encryptor(key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(ciphertext);
         CryptoPP::PK_EncryptorFilter *ef = new CryptoPP::PK_EncryptorFilter(prng, encryptor, ss);
         CryptoPP::StringSource(this->data.str(), true, ef);
@@ -263,13 +273,13 @@ namespace cdax {
      * @param  CryptoPP::RSA::PrivateKey key the private key
      * @return bool true if decryption was successful
      */
-    bool Message::decrypt(CryptoPP::RSA::PrivateKey* key)
+    bool Message::decrypt(CryptoPP::RSA::PrivateKey key)
     {
         std::string plaintext;
         CryptoPP::AutoSeededRandomPool prng;
 
         try {
-            CryptoPP::RSAES_PKCS1v15_Decryptor decryptor(*key);
+            CryptoPP::RSAES_PKCS1v15_Decryptor decryptor(key);
             CryptoPP::StringSink *ss = new CryptoPP::StringSink(plaintext);
             CryptoPP::PK_DecryptorFilter *df = new CryptoPP::PK_DecryptorFilter(prng, decryptor, ss);
             CryptoPP::StringSource(this->data.str(), true, df);
@@ -290,12 +300,12 @@ namespace cdax {
      * topic name, topic data and possibly the encryption IV as payload data
      * @param CryptoPP::RSA::PrivateKey key the RSa private key
      */
-    void Message::sign(CryptoPP::RSA::PrivateKey* key)
+    void Message::sign(CryptoPP::RSA::PrivateKey key)
     {
         std::string sig;
         CryptoPP::AutoSeededRandomPool prng;
 
-        CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(*key);
+        CryptoPP::RSASSA_PKCS1v15_SHA_Signer signer(key);
         CryptoPP::StringSink *ss = new CryptoPP::StringSink(sig);
         CryptoPP::SignerFilter *sf = new CryptoPP::SignerFilter(prng, signer, ss);
         CryptoPP::StringSource(this->getPayload().str(), true, sf);
@@ -308,10 +318,10 @@ namespace cdax {
      * @param  CryptoPP::RSA::PublicKey key the RSA public key
      * @return bool true if verification was successful
      */
-    bool Message::verify(CryptoPP::RSA::PublicKey* key)
+    bool Message::verify(CryptoPP::RSA::PublicKey key)
     {
         try {
-            CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(*key);
+            CryptoPP::RSASSA_PKCS1v15_SHA_Verifier verifier(key);
             const int flags = CryptoPP::SignatureVerificationFilter::THROW_EXCEPTION;
             CryptoPP::SignatureVerificationFilter *svf = new CryptoPP::SignatureVerificationFilter(verifier, NULL, flags);
             CryptoPP::StringSource(this->getPayload().str() + this->signature.str(), true, svf);
@@ -393,23 +403,23 @@ namespace cdax {
         return card->hmacVerify(buffer);
     }
 
-    bool Message::handleTopicKeyResponse(SmartCard* card)
+    bool Message::handleTopicKeyResponse(SmartCard* card, size_t key_index)
     {
         bytestring buffer;
         buffer.Assign(this->getDataLength() + this->getPayload() + this->getSignature());
 
-        return card->handleTopicKeyResponse(buffer);
+        return card->handleTopicKeyResponse(buffer, key_index);
     }
 
 
-    bool Message::encode(SmartCard* card)
+    bool Message::encode(SmartCard* card, size_t key_index)
     {
         this->addPKCS7();
 
         bytestring buffer;
         buffer.Assign(this->getDataLength() + this->getPayload());
 
-        if (!card->encode(buffer)) {
+        if (!card->encode(buffer, key_index)) {
             return false;
         }
 
@@ -423,12 +433,12 @@ namespace cdax {
     }
 
 
-    bool Message::decode(SmartCard* card)
+    bool Message::decode(SmartCard* card, size_t key_index)
     {
         bytestring buffer;
         buffer.Assign(this->getDataLength() + this->getPayload() + this->getSignature());
 
-        if (!card->decode(buffer)) {
+        if (!card->decode(buffer, key_index)) {
             return false;
         }
 
@@ -456,7 +466,7 @@ namespace cdax {
         this->data.resize(len - (this->data[len - 1] & 0xFF));
     }
 
-    bytestring Message::getDataLength() const
+    bytestring Message::getDataLength()
     {
         bytestring buffer(2);
         size_t data_len = this->getData().size();
@@ -470,7 +480,7 @@ namespace cdax {
      * class attribute iv as a bytestring
      * @param int length the length of the IV
      */
-    bytestring Message::generateIV(int length) const
+    bytestring Message::generateIV(int length)
     {
         CryptoPP::AutoSeededRandomPool prng;
         bytestring iv = bytestring(length);
@@ -485,13 +495,14 @@ namespace cdax {
      */
     std::ostream &operator<< (std::ostream &out, const Message &msg)
     {
-        out << "data: " << hex(msg.data) << std::endl;
-        out << "topic: " << msg.topic << std::endl;
-        out << "source: " << msg.id << std::endl;
-        if (msg.signature.size() > 0) {
-            out << "hmac/signature: " << hex(msg.signature) << std::endl;
+        out << "data: " << msg.getData().hex() << std::endl;
+        out << "topic: " << msg.getTopic().str() << std::endl;
+        out << "source: " << msg.getId().str() << std::endl;
+        if (msg.getSignature().size() > 0) {
+            out << "hmac/signature: " << msg.getSignature().hex() << std::endl;
         }
-        out << "time: " << std::ctime(&msg.timestamp);
+        const std::time_t ts = msg.getRawTimestamp();
+        out << "time: " << std::ctime(&ts);
 
         return out;
     }

@@ -70,7 +70,7 @@ public class ClientApplet extends Applet implements ExtendedLength
     private RSAPublicKey masterKey;
 
     // topic key count
-    private static final short TOPIC_KEY_COUNT = 1;
+    private static final short TOPIC_KEY_COUNT = 2;
 
     // private HMACKey hmacKeys;
     private byte[] hmacKeys;
@@ -284,8 +284,9 @@ public class ClientApplet extends Applet implements ExtendedLength
     private byte rsa_verify(byte[] buffer, short offset, short length)
     {
         this.signature.init(this.masterKey, Signature.MODE_VERIFY);
-        short rsa_data_len = (short) (length - RSA_SIGN_LEN - offset);
-        if (this.signature.verify(buffer, offset, rsa_data_len, buffer, (short) (length - RSA_SIGN_LEN), RSA_SIGN_LEN)) {
+        short rsa_data_len = (short) (length - RSA_SIGN_LEN);
+        short signature_offset = (short) (offset + length - RSA_SIGN_LEN);
+        if (this.signature.verify(buffer, offset, rsa_data_len, buffer, signature_offset, RSA_SIGN_LEN)) {
             return (byte) ZERO;
         }
         return (byte) ONE;

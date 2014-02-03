@@ -168,7 +168,7 @@ void cryptoBenchmark()
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.hmac(&key);
+            msg.hmac(key);
             msg.hmacVerify(card);
         }
         logTime(file, card, len);

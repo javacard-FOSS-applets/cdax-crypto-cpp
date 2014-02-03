@@ -1,10 +1,8 @@
 
-#include "Subscriber.hpp"
+#include "CardSubscriber.hpp"
 
 namespace cdax {
 
-
-    Subscriber::Subscriber() {}
     /**
      * Construct a new subscriber, given its name,
      * RSA key pair and the port number to listen on
@@ -12,11 +10,11 @@ namespace cdax {
      * @param string port_number port number as string
      * @param string rsa_key_pair
      */
-    Subscriber::Subscriber(bytestring identity, std::string port_number, RSAKeyPair rsa_key_pair)
+    CardSubscriber::CardSubscriber(bytestring identity, std::string port_number, SmartCard *smart_card)
     {
         this->id = identity;
         this->port = port_number;
-        this->key_pair = rsa_key_pair;
+        this->card = smart_card;
 
         // terminal log color
         this->color = GREEN;
@@ -27,18 +25,9 @@ namespace cdax {
      * @param   Message msg topic data message
      * @return  Message empty response
      */
-    Message Subscriber::handle(Message msg)
+    Message CardSubscriber::handle(Message msg)
     {
-        // verify with the node topic key
-        if (!msg.hmacVerify(this->topic_keys[msg.getTopic()].getAuthKey())) {
-
-            this->log("could not verify:", msg);
-
-            return Message();
-        }
-
-        // AES decrypt with end-to-end topic key
-        if (!msg.aesDecrypt(this->topic_keys[msg.getTopic()].getEncKey())) {
+        if (!msg.decode(card)) {
 
             this->log("could not decrypt and verify:", msg);
 

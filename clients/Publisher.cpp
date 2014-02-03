@@ -3,6 +3,8 @@
 
 namespace cdax {
 
+    Publisher::Publisher() {}
+
     /**
      * Construct a new publisher, given a name and RSA key pair
      * @param string identity

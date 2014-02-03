@@ -27,8 +27,8 @@ namespace cdax {
         SmartCard *card = NULL;
 
     public:
-        void addTopic(bytestring topic_name, std::string topic_port);
-        void setServer(CryptoPP::RSA::PublicKey *key);
+        virtual void addTopic(bytestring topic_name, std::string topic_port);
+        void setServer(CryptoPP::RSA::PublicKey key);
     };
 
 }

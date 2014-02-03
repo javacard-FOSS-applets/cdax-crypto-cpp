@@ -43,18 +43,18 @@ namespace cdax {
         std::string port;
 
         // security server public key
-        CryptoPP::RSA::PublicKey *sec_server_key;
+        CryptoPP::RSA::PublicKey sec_server_key;
 
         // TCP utility functions
         virtual Message handle(Message request);
-        Message send(Message request, std::string port);
+        virtual Message send(Message request, std::string port);
 
         // utility functions
         void sleep();
         void sleep(int seconds);
 
-        void log(std::string text);
-        void log(std::string text, Message msg);
+        void log(const std::string text);
+        void log(const std::string text, Message msg);
 
     public:
         virtual void serve();

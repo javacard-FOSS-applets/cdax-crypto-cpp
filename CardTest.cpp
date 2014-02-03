@@ -47,14 +47,13 @@ void signatuteTest()
 {
     log("> starting tests...");
 
-    // Generate RSA Parameters
-    // generateRSA(serverKeyPair, clientPub, card);
-
     msg.sign(card);
     log("> message signed on card");
 
     if (msg.verify(clientPub)) {
         log("> signature verified");
+    } else {
+        log("> ERROR");
     }
 
     msg.sign(serverKeyPair->getPrivate());
@@ -62,6 +61,8 @@ void signatuteTest()
 
     if (msg.verify(card)) {
         log("> signature verified on card");
+    } else {
+        log("> ERROR");
     }
 }
 
@@ -69,14 +70,13 @@ void encryptionRSATest()
 {
     log("> starting tests...");
 
-    // Generate RSA Parameters
-    // generateRSA(serverKeyPair, clientPub, card);
-
     msg.encrypt(card);
     log("> message encrypted on card");
 
     if (msg.decrypt(serverKeyPair->getPrivate())) {
         log("> message decrypted");
+    } else {
+        log("> ERROR");
     }
 
     msg.encrypt(clientPub);
@@ -84,6 +84,8 @@ void encryptionRSATest()
 
     if (msg.decrypt(card)) {
         log("> message decrypted on card");
+    } else {
+        log("> ERROR");
     }
 }
 
@@ -122,6 +124,8 @@ void hmacTest()
 
     if (msg.hmacVerify(card)) {
         log("> messaged hmac verified on card");
+    } else {
+        log("> ERROR");
     }
 
     msg.hmac(card);
@@ -129,6 +133,8 @@ void hmacTest()
 
     if (msg.hmacVerify(topic_key_pair.getAuthKey())) {
         log("> messaged hmac verified");
+    } else {
+        log("> ERROR");
     }
 }
 
@@ -136,51 +142,55 @@ void testHighLevel()
 {
     log("> starting tests...");
 
-    // Generate RSA Parameters
-    // generateRSA(serverKeyPair, clientPub, card);
+    card->setDebug(true);
 
     // test topic join response
     msg.setData(*topic_key_pair.getValue());
     msg.encrypt(clientPub);
     msg.sign(serverKeyPair->getPrivate());
 
-    std::cout << "> topic key pair: " << topic_key_pair.getValue().hex() << std::endl;
+    std::cout << "> topic key pair 0: " << topic_key_pair.getValue().hex() << std::endl;
 
     msg.handleTopicKeyResponse(card);
-    log("> topic join response processed on card");
+    log("> topic join response processed on card with key 0");
 
     // test encode and decode
     msg.setData("hello");
 
     msg.encode(card);
-    log("> message encoded on card");
+    log("> message encoded on card with key 0");
     std::cout << msg;
 
     msg.decode(card);
-    log("> message decoded on card");
+    log("> message decoded on card with key 0");
     std::cout << msg;
 
-}
+    TopicKeyPair topic_key_pair2(
+        generateKey(TopicKeyPair::KeyLength),
+        generateKey(TopicKeyPair::KeyLength)
+    );
 
-void tmp()
-{
-    log("> starting tests...");
 
-    card->setDebug(true);
+    // test topic join response
+    msg.setData(*topic_key_pair.getValue());
+    msg.encrypt(clientPub);
+    msg.sign(serverKeyPair->getPrivate());
 
-    card->storeTopicKey(topic_key_pair.getValue());
+    std::cout << "> topic key pair 1: " << topic_key_pair.getValue().hex() << std::endl;
 
-    bytestring data(600);
-    prng.GenerateBlock(data.BytePtr(), data.size());
-    msg.setData(data);
+    msg.handleTopicKeyResponse(card, 1);
+    log("> topic join response processed on card with key 1");
 
-    msg.hmac(topic_key_pair.getAuthKey());
+    // test encode and decode
+    msg.setData("hello");
 
+    msg.encode(card, 1);
+    log("> message encoded on card with key 1");
     std::cout << msg;
 
-    card->startTimer();
-    msg.hmacVerify(card);
-    std::cout << "That took: " << card->getTimerMean() << std::endl;
+    msg.decode(card, 1);
+    log("> message decoded on card with key 1");
+    std::cout << msg;
 }
 
 /**
@@ -208,7 +218,7 @@ int main(int argc, char* argv[])
         RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
     }
 
-    if (file_exists("data/client-pub.key") || false) {
+    if (file_exists("data/client-pub.key")) {
         clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
     } else {
         clientPub = card->initialize(serverKeyPair->getPublic());
@@ -223,8 +233,7 @@ int main(int argc, char* argv[])
     // encryptionRSATest();
     // encryptionAESTest();
     // hmacTest();
-    // testHighLevel();
-    tmp();
+    testHighLevel();
 
     return 0;
 }

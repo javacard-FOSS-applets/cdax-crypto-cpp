@@ -214,27 +214,27 @@ namespace cdax {
         return this->transmit(0x03, *tmp_key);
     }
 
-    bool SmartCard::storePrivateKey(CryptoPP::RSA::PrivateKey* privKey)
+    bool SmartCard::storePrivateKey(CryptoPP::RSA::PrivateKey privKey)
     {
-        size_t p_len = privKey->GetPrime1().MinEncodedSize();
-        size_t q_len = privKey->GetPrime2().MinEncodedSize();
-        size_t pq_len = privKey->GetMultiplicativeInverseOfPrime2ModPrime1().MinEncodedSize();
-        size_t dp1_len = privKey->GetModPrime1PrivateExponent().MinEncodedSize();
-        size_t dq1_len = privKey->GetModPrime2PrivateExponent().MinEncodedSize();
+        size_t p_len = privKey.GetPrime1().MinEncodedSize();
+        size_t q_len = privKey.GetPrime2().MinEncodedSize();
+        size_t pq_len = privKey.GetMultiplicativeInverseOfPrime2ModPrime1().MinEncodedSize();
+        size_t dp1_len = privKey.GetModPrime1PrivateExponent().MinEncodedSize();
+        size_t dq1_len = privKey.GetModPrime2PrivateExponent().MinEncodedSize();
         size_t data_len = p_len + q_len + pq_len + dp1_len + dq1_len;
 
         bytestring data(data_len);
 
         size_t offset = 0;
-        privKey->GetPrime1().Encode(data.BytePtr() + offset, p_len);
+        privKey.GetPrime1().Encode(data.BytePtr() + offset, p_len);
         offset = offset + p_len;
-        privKey->GetPrime2().Encode(data.BytePtr() + offset, q_len);
+        privKey.GetPrime2().Encode(data.BytePtr() + offset, q_len);
         offset = offset + q_len;
-        privKey->GetMultiplicativeInverseOfPrime2ModPrime1().Encode(data.BytePtr() + offset, pq_len);
+        privKey.GetMultiplicativeInverseOfPrime2ModPrime1().Encode(data.BytePtr() + offset, pq_len);
         offset = offset + pq_len;
-        privKey->GetModPrime1PrivateExponent().Encode(data.BytePtr() + offset, dp1_len);
+        privKey.GetModPrime1PrivateExponent().Encode(data.BytePtr() + offset, dp1_len);
         offset = offset + dp1_len;
-        privKey->GetModPrime2PrivateExponent().Encode(data.BytePtr() + offset, dq1_len);
+        privKey.GetModPrime2PrivateExponent().Encode(data.BytePtr() + offset, dq1_len);
         offset = offset + dq1_len;
 
         return this->transmit(0x01, data);
@@ -258,37 +258,36 @@ namespace cdax {
         return this->transmit(0x00, select);
     }
 
-    CryptoPP::RSA::PublicKey* SmartCard::initialize(CryptoPP::RSA::PublicKey* secServerPub)
+    CryptoPP::RSA::PublicKey SmartCard::initialize(CryptoPP::RSA::PublicKey secServerPub)
     {
-        size_t mod_len = secServerPub->GetModulus().MinEncodedSize();
-        // size_t exp_len = secServerPub->GetPublicExponent().MinEncodedSize();
+        size_t mod_len = secServerPub.GetModulus().MinEncodedSize();
+        // size_t exp_len = secServerPub.GetPublicExponent().MinEncodedSize();
         size_t exp_len = 3; // always encode in 3 bytes, since the card expects 3 bytes
         size_t data_len = mod_len + exp_len;
 
         bytestring data;
+        CryptoPP::RSA::PublicKey clientPubKey;
 
         if (!this->transmit(0x01, data)) {
-            return NULL;
+            throw CardException("Did not retrieve client public key");
         }
 
         if (data.size() < data_len) {
-            return NULL;
+            throw CardException("Response data to small");
         }
 
-        CryptoPP::RSA::PublicKey* clientPubKey = new CryptoPP::RSA::PublicKey();
-
-        clientPubKey->SetModulus(CryptoPP::Integer(data.BytePtr(), mod_len));
-        clientPubKey->SetPublicExponent(CryptoPP::Integer(data.BytePtr() + mod_len, exp_len));
+        clientPubKey.SetModulus(CryptoPP::Integer(data.BytePtr(), mod_len));
+        clientPubKey.SetPublicExponent(CryptoPP::Integer(data.BytePtr() + mod_len, exp_len));
 
         std::cout << "mod len: " << mod_len << " exp len: " << exp_len << std::endl;
 
         data.resize(data_len);
 
-        secServerPub->GetModulus().Encode(data.BytePtr(), mod_len);
-        secServerPub->GetPublicExponent().Encode(data.BytePtr() + mod_len, exp_len);
+        secServerPub.GetModulus().Encode(data.BytePtr(), mod_len);
+        secServerPub.GetPublicExponent().Encode(data.BytePtr() + mod_len, exp_len);
 
         if (!this->transmit(0x02, data)) {
-            return NULL;
+            throw CardException("Could not transmit server public key");
         }
 
         return clientPubKey;
@@ -342,19 +341,19 @@ namespace cdax {
         return this->transmit(0x31, msg);
     }
 
-    bool SmartCard::handleTopicKeyResponse(bytestring &msg)
+    bool SmartCard::handleTopicKeyResponse(bytestring &msg, size_t key_index)
     {
-        return this->transmit(0x07, msg);
+        return this->transmit(0x07, msg, (byte) key_index);
     }
 
-    bool SmartCard::encode(bytestring &msg)
+    bool SmartCard::encode(bytestring &msg, size_t key_index)
     {
-        return this->transmit(0x08, msg);
+        return this->transmit(0x08, msg, (byte) key_index);
     }
 
-    bool SmartCard::decode(bytestring &msg)
+    bool SmartCard::decode(bytestring &msg, size_t key_index)
     {
-        return this->transmit(0x09, msg);
+        return this->transmit(0x09, msg, (byte) key_index);
     }
 
 

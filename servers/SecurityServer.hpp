@@ -7,7 +7,9 @@
 #include "../shared/Host.hpp"
 
 #include "../clients/Publisher.hpp"
+#include "../clients/CardPublisher.hpp"
 #include "../clients/Subscriber.hpp"
+#include "../clients/CardSubscriber.hpp"
 
 #include "Node.hpp"
 
@@ -26,10 +28,10 @@ namespace cdax {
         boost::unordered_map<bytestring, TopicKeyPair> topics;
 
         // list of node names and public keys
-        boost::unordered_map<bytestring, CryptoPP::RSA::PublicKey*> nodes;
+        boost::unordered_map<bytestring, CryptoPP::RSA::PublicKey> nodes;
 
         // list of client names and public keys
-        boost::unordered_map<bytestring, CryptoPP::RSA::PublicKey*> clients;
+        boost::unordered_map<bytestring, CryptoPP::RSA::PublicKey> clients;
 
         // pseudo random number generator
         CryptoPP::AutoSeededRandomPool prng;
@@ -46,9 +48,9 @@ namespace cdax {
         void addTopic(bytestring topic_name);
         Node* addNode(bytestring node_name, std::string port);
         Publisher* addPublisher(bytestring client_name);
-        Publisher* addPublisher(bytestring client_name, SmartCard *card);
+        CardPublisher* addPublisher(bytestring client_name, SmartCard *card);
         Subscriber* addSubscriber(bytestring client_name, std::string port);
-
+        CardSubscriber* addSubscriber(bytestring client_name, std::string port, SmartCard *card);
 
     };
 

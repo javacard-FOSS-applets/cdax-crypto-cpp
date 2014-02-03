@@ -76,8 +76,10 @@ void simple()
     // when adding new topics to nodes
     thrds.create_thread(std::bind(&SecurityServer::serve, s));
 
-    Publisher *p1 = s->addPublisher("publisher");
-    Subscriber *s1 = s->addSubscriber("subscriber", "5001");
+    SmartCard *card = new SmartCard();
+
+    Publisher *p1 = s->addPublisher("publisher", card);
+    Subscriber *s1 = s->addSubscriber("subscriber", "5001", card);
     Node *n1 = s->addNode("node", "6001");
 
     // create treads from each host main loop

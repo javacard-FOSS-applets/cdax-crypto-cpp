@@ -7,14 +7,14 @@
 #include <ctime>
 
 #include <cryptopp/aes.h>
-#include <cryptopp/ccm.h>
-#include <cryptopp/gcm.h>
+#include <cryptopp/modes.h>
 #include <cryptopp/hmac.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/rsa.h>
-#include <cryptopp/salsa.h>
 #include <cryptopp/filters.h>
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 
@@ -52,8 +52,8 @@ namespace cdax {
         void addPKCS7();
         void removePKCS7();
 
-        bytestring generateIV(int length) const;
-        bytestring getDataLength() const;
+        bytestring generateIV(int length);
+        bytestring getDataLength();
 
         /**
          * Encode message content to boost archive model
@@ -92,31 +92,32 @@ namespace cdax {
         const bytestring getPayload() const;
 
         void setId(bytestring identity);
-        bytestring getId() const;
+        const bytestring getId() const;
 
         void setTopic(bytestring topic_name);
-        bytestring getTopic() const;
+        const bytestring getTopic() const;
 
         void setTimestamp(bytestring message_timestamp);
-        bytestring getTimestamp() const;
+        const bytestring getTimestamp() const;
+        const std::time_t getRawTimestamp() const;
 
         void setData(bytestring topic_data);
-        bytestring getData() const;
+        const bytestring getData() const;
 
         void setSignature(bytestring sig);
-        bytestring getSignature() const;
+        const bytestring getSignature() const;
 
-        void aesEncrypt(const bytestring key);
-        bool aesDecrypt(const bytestring key);
+        void aesEncrypt(bytestring key);
+        bool aesDecrypt(bytestring key);
 
-        void hmac(const bytestring key);
-        bool hmacVerify(const bytestring key);
+        void hmac(bytestring key);
+        bool hmacVerify(bytestring key);
 
-        void encrypt(CryptoPP::RSA::PublicKey* key);
-        bool decrypt(CryptoPP::RSA::PrivateKey* key);
+        void encrypt(CryptoPP::RSA::PublicKey key);
+        bool decrypt(CryptoPP::RSA::PrivateKey key);
 
-        void sign(CryptoPP::RSA::PrivateKey* key);
-        bool verify(CryptoPP::RSA::PublicKey* key);
+        void sign(CryptoPP::RSA::PrivateKey key);
+        bool verify(CryptoPP::RSA::PublicKey key);
 
         bool sign(SmartCard* card);
         bool verify(SmartCard* card);
@@ -130,10 +131,10 @@ namespace cdax {
         bool aesEncrypt(SmartCard* card);
         bool aesDecrypt(SmartCard* card);
 
-        bool handleTopicKeyResponse(SmartCard* card);
+        bool handleTopicKeyResponse(SmartCard* card, size_t key_index = 0);
 
-        bool encode(SmartCard* card);
-        bool decode(SmartCard* card);
+        bool encode(SmartCard* card, size_t key_index = 0);
+        bool decode(SmartCard* card, size_t key_index = 0);
     };
 
 }

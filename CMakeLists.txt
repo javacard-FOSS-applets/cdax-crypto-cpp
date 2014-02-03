@@ -24,6 +24,9 @@ set( LIBS ${LIBS} ${Boost_LIBRARIES} ${PCSCLITE_LIBRARY} ${CRYPTOPP_LIBRARIES} )
 add_executable( card_test CardTest
     card/SmartCard
     shared/Message
+    shared/bytestring
+    shared/TopicKeyPair
+    shared/RSAKeyPair
     shared/Common
 )
 target_link_libraries( card_test ${LIBS} )
@@ -31,12 +34,18 @@ target_link_libraries( card_test ${LIBS} )
 add_executable( simulator Main
     clients/Subscriber
     clients/Publisher
+    clients/CardPublisher
+    clients/CardSubscriber
     clients/Client
+    clients/CardClient
     card/SmartCard
     servers/SecurityServer
     servers/Node
     shared/Host
     shared/Message
+    shared/bytestring
+    shared/TopicKeyPair
+    shared/RSAKeyPair
     shared/Common
 )
 target_link_libraries( simulator ${LIBS} )
@@ -44,6 +53,9 @@ target_link_libraries( simulator ${LIBS} )
 add_executable( msg_test MessageTest
     card/SmartCard
     shared/Message
+    shared/bytestring
+    shared/TopicKeyPair
+    shared/RSAKeyPair
     shared/Common
 )
 target_link_libraries( msg_test ${LIBS} )
@@ -51,6 +63,9 @@ target_link_libraries( msg_test ${LIBS} )
 add_executable( benchmark_test BenchmarkTest
     card/SmartCard
     shared/Message
+    shared/bytestring
+    shared/TopicKeyPair
+    shared/RSAKeyPair
     shared/Common
 )
 target_link_libraries( benchmark_test ${LIBS} )

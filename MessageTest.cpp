@@ -83,9 +83,7 @@ void testRSA()
 
     std::cout << "RSA plaintext: " << msg->getData().hex() << std::endl;
 
-    RSAKeyPair* keypair = generateKeyPair(512);
-    // std::cout << "RSA public key: " << hex(keypair->getPublic()) << std::endl;
-    // std::cout << "RSA private key: " << hex(keypair->getPrivate()) << std::endl;
+    RSAKeyPair* keypair = generateKeyPair(2048);
 
     msg->encrypt(keypair->getPublic());
     std::cout << "RSA ciphertext: " << msg->getData().hex() << std::endl;
@@ -104,7 +102,7 @@ void testEncode()
 {
     Message msg = Message("foo", "bar", "baz");
 
-    RSAKeyPair* keypair = generateKeyPair(512);
+    RSAKeyPair* keypair = generateKeyPair(2048);
     bytestring* key = generateKey(16);
 
     msg.encrypt(keypair->getPublic());
@@ -113,9 +111,9 @@ void testEncode()
 
     std::cout << "Message:" << msg << std::endl;
 
-    std::string encoded = msg.encode();
+    bytestring encoded = msg.encode();
 
-    std::cout << "Encoded:" << hex(encoded) << std::endl;
+    std::cout << "Encoded:" << encoded.hex() << std::endl;
 
     Message msg2 = Message();
     msg2.decode(encoded);

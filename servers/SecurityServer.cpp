@@ -12,7 +12,16 @@ namespace cdax {
     {
         this->id = identity;
         this->port = port_number;
-        this->key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
+
+        if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
+            CryptoPP::RSA::PublicKey pub = RSAKeyPair::loadPubKey("data/server-pub.key");
+            CryptoPP::RSA::PrivateKey priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+            this->key_pair = RSAKeyPair(pub, priv);
+        } else {
+            this->key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
+            RSAKeyPair::saveKey("data/server-priv.key", this->key_pair.getPrivate());
+            RSAKeyPair::saveKey("data/server-pub.key", this->key_pair.getPublic());
+        }
 
         // terminal log color
         this->color = RED;
@@ -31,6 +40,7 @@ namespace cdax {
     {
         // security server only handles topic join requests
         bytestring join = "topic_join";
+
         if (msg.getData() != join) {
 
             this->log("received unknown request:", msg);
@@ -39,7 +49,7 @@ namespace cdax {
         }
 
         // public key of topic key requester
-        CryptoPP::RSA::PublicKey *pub_key;
+        CryptoPP::RSA::PublicKey pub_key;
 
         // select the public key of a client or node
         if (this->clients.count(msg.getId())) {
@@ -48,7 +58,7 @@ namespace cdax {
             pub_key = this->clients[msg.getId()];
         } else if (this->nodes.count(msg.getId())) {
 
-            // GET NODE PUBLIC KEY
+            // get node public key
             pub_key = this->nodes[msg.getId()];
         } else {
 
@@ -71,11 +81,11 @@ namespace cdax {
         if (this->clients.count(msg.getId())) {
 
             // encode topic key pair for client
-            data = *this->topics[msg.getTopic()].getValue();
+            data = this->topics[msg.getTopic()].getValue();
         } else {
 
             // encode hmac key for node
-            data = *this->topics[msg.getTopic()].getAuthKey();
+            data = this->topics[msg.getTopic()].getAuthKey();
         }
 
         Message response(this->id, msg.getTopic(), data);
@@ -186,18 +196,29 @@ namespace cdax {
      * @param  string node_name name of the publisher
      * @return Publisher
      */
-    Publisher* SecurityServer::addPublisher(bytestring client_name, SmartCard *card)
+    CardPublisher* SecurityServer::addPublisher(bytestring client_name, SmartCard *card)
     {
         if (!card->connect()) {
             throw new CardException("Card not found");
         }
 
-        RSAKeyPair rsa_key_pair = this->generateKeyPair(RSAKeyPair::KeyLength);
-        this->clients[client_name] = rsa_key_pair.getPublic();
-        Publisher *pub = new Publisher(client_name, rsa_key_pair);
-        pub->setServer(this->key_pair.getPublic());
+        CardPublisher *pub = new CardPublisher(client_name, card);
+        this->clients[client_name] = pub->initKeys(this->key_pair.getPublic());
 
         return pub;
+    }
+
+
+    CardSubscriber* SecurityServer::addSubscriber(bytestring client_name, std::string port, SmartCard *card)
+    {
+        if (!card->connect()) {
+            throw new CardException("Card not found");
+        }
+
+        CardSubscriber *sub = new CardSubscriber(client_name, port, card);
+        this->clients[client_name] = sub->initKeys(this->key_pair.getPublic());
+
+        return sub;
     }
 }
 

@@ -25,7 +25,7 @@ echo " ...done"
 echo -n "> deleted previous CAP file"
 java \
     -d32 \
-    -jar ../../apps/gpj/gpj.jar \
+    -jar ../apps/gpj/gpj.jar \
     -deletedeps -delete 000000000042  \
     1> /dev/null
 echo " ...done"
@@ -33,7 +33,7 @@ echo " ...done"
 echo -n "> uploadeding CAP file"
 java \
     -d32 \
-    -jar ../../apps/gpj/gpj.jar \
+    -jar ../apps/gpj/gpj.jar \
     -load applet/bin/cdax/javacard/cdax.cap \
     -install \
     1> /dev/null

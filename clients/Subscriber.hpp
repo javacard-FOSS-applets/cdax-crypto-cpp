@@ -8,12 +8,13 @@ namespace cdax {
     /**
      * CDAX subscriber class, responsible for receiving and logging topic data
      */
-    class Subscriber : public Client
+    class Subscriber : public virtual Client
     {
     protected:
-        Message handle(Message request);
+        virtual Message handle(Message request);
 
     public:
+        Subscriber();
         Subscriber(bytestring identity, std::string port_number, RSAKeyPair rsa_key_pair);
     };
 
