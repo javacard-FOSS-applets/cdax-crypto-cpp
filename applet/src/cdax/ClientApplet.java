@@ -30,6 +30,7 @@ public class ClientApplet extends Applet implements ExtendedLength
     private static final byte GEN_KEYPAIR = (byte) 0x01;
     private static final byte STORE_MASTER = (byte) 0x02;
     private static final byte STORE_KEY = (byte) 0x03;
+    private static final byte TEST_PROCESS = (byte) 0x04;
     private static final byte TEST_SEND = (byte) 0x05;
     private static final byte TEST_RECEIVE = (byte) 0x06;
 
@@ -70,7 +71,7 @@ public class ClientApplet extends Applet implements ExtendedLength
     private RSAPublicKey masterKey;
 
     // topic key count
-    private static final short TOPIC_KEY_COUNT = 2;
+    private static final short TOPIC_KEY_COUNT = 255;
 
     // private HMACKey hmacKeys;
     private byte[] hmacKeys;
@@ -119,8 +120,8 @@ public class ClientApplet extends Applet implements ExtendedLength
             }
         }
 
-        byte P1  = (byte) (buffer[ISO7816.OFFSET_P1] & 0xFF);
-        byte P2  = (byte) (buffer[ISO7816.OFFSET_P2] & 0xFF);
+        short P1  = (short) (buffer[ISO7816.OFFSET_P1] & 0xFF);
+        short P2  = (short) (buffer[ISO7816.OFFSET_P2] & 0xFF);
         byte LC  = (byte) (buffer[ISO7816.OFFSET_LC] & 0xFF);
 
         if (buffer[ISO7816.OFFSET_CLA] != CDAX_CLA) {
@@ -188,6 +189,9 @@ public class ClientApplet extends Applet implements ExtendedLength
             case TEST_RECEIVE:
                 apdu.setOutgoingAndSend(ZERO, Util.getShort(buffer, ISO7816.OFFSET_P1));
                 break;
+            case TEST_PROCESS:
+                apdu.setOutgoingAndSend(ZERO, (short) buffer[LEN]);
+                break;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
         }
@@ -237,14 +241,14 @@ public class ClientApplet extends Applet implements ExtendedLength
         Util.arrayFillNonAtomic(this.hmacKeys, (short) (HMAC_KEY_LENGTH * key_index + HMAC_BLOCK_SIZE + HMAC_KEY_SIZE), (short) (HMAC_BLOCK_SIZE - HMAC_KEY_SIZE), (byte) 0x5C);
     }
 
-    private void encode(APDU apdu, byte[] buffer, short offset, short length, byte key_index)
+    private void encode(APDU apdu, byte[] buffer, short offset, short length, short key_index)
     {
         // length of the topic data to be encrypted
         short data_len = Util.getShort(buffer, offset);
         // offset in buffer of the topic data to be encrypted
         short data_offset = (short) (offset + length - data_len);
         // encrypt the topic data using aes cbc, the result is put in the same buffer at the original offset
-        short cipher_len = this.aes_encrypt(buffer, data_offset, data_len, key_index, (byte) 0x00, data_offset);
+        short cipher_len = this.aes_encrypt(buffer, data_offset, data_len, key_index, ZERO, data_offset);
         // calculate the position after the ecnrypted topic data, at which the hmac has to be appended
         short hmac_offset = (short) (data_offset + cipher_len);
         // calculate to total length of the data over which the hmac will be generated
@@ -257,7 +261,7 @@ public class ClientApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend(data_offset, encoded_len);
     }
 
-    private void decode(APDU apdu, byte[] buffer, short offset, short length, byte key_index)
+    private void decode(APDU apdu, byte[] buffer, short offset, short length, short key_index)
     {
         // length of the topic data to be decrypted
         short data_len = Util.getShort(buffer, offset);
@@ -270,7 +274,7 @@ public class ClientApplet extends Applet implements ExtendedLength
         // calcute the offset of the encrypted data
         short data_offset = (short) (offset + length - MessageDigest.LENGTH_SHA_256 - data_len);
         // aes cbc decrypt the encrypted topic data, return the length of the plaintext (+padding)
-        short plain_len = this.aes_decrypt(buffer, data_offset, data_len, key_index, (byte) 0x00);
+        short plain_len = this.aes_decrypt(buffer, data_offset, data_len, key_index, ZERO);
         // resturn the plaintext+padding
         apdu.setOutgoingAndSend(ZERO, plain_len);
     }
@@ -304,11 +308,11 @@ public class ClientApplet extends Applet implements ExtendedLength
         return rsaCipher.doFinal(buffer, offset, length, buffer, ZERO);
     }
 
-    private short aes_encrypt(byte[] buffer, short offset, short length, byte key_index, byte flags, short target_offset)
+    private short aes_encrypt(byte[] buffer, short offset, short length, short key_index, short flags, short target_offset)
     {
         short len;
 
-        if ((flags & 0x0F) == 0x01) {
+        if (flags == 1) {
             // add pkcs7 padding
             byte padding = (byte) (AES_BLOCK_SIZE - (length % AES_BLOCK_SIZE));
             Util.arrayFillNonAtomic(buffer, (short) (HEADER_LEN + length), (short) padding, padding);
@@ -336,7 +340,7 @@ public class ClientApplet extends Applet implements ExtendedLength
         return len;
     }
 
-    private short aes_decrypt(byte[] buffer, short offset, short length, byte key_index, byte flags)
+    private short aes_decrypt(byte[] buffer, short offset, short length, short key_index, short flags)
     {
         this.aesKey.setKey(this.aesKeys, (short) (AES_KEY_SIZE * key_index));
 
@@ -345,7 +349,7 @@ public class ClientApplet extends Applet implements ExtendedLength
 
         this.aesKey.clearKey();
 
-        if ((flags & 0x0F) == 0x01) {
+        if (flags == 1) {
             // pkcs7 padding
             byte padding = buffer[(short) (len - ONE)];
             len -= padding;

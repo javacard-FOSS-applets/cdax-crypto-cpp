@@ -361,21 +361,21 @@ namespace cdax {
         return card->decrypt(this->data);
     }
 
-    bool Message::aesEncrypt(SmartCard* card)
+    bool Message::aesEncrypt(SmartCard* card, size_t key_index)
     {
         this->addPKCS7();
 
-        if (!card->aesEncrypt(this->data)) {
+        if (!card->aesEncrypt(this->data, key_index)) {
             return false;
         }
 
         return true;
     }
 
-    bool Message::aesDecrypt(SmartCard* card)
+    bool Message::aesDecrypt(SmartCard* card, size_t key_index)
     {
         bytestring buffer = this->data;
-        if (!card->aesDecrypt(this->data)) {
+        if (!card->aesDecrypt(this->data, key_index)) {
             return false;
         }
 
@@ -384,10 +384,10 @@ namespace cdax {
         return true;
     }
 
-    bool Message::hmac(SmartCard* card)
+    bool Message::hmac(SmartCard* card, size_t key_index)
     {
         bytestring buffer = this->getPayload();
-        if (!card->hmac(buffer)) {
+        if (!card->hmac(buffer, key_index)) {
             return false;
         }
         this->signature = buffer;
@@ -395,12 +395,12 @@ namespace cdax {
         return true;
     }
 
-    bool Message::hmacVerify(SmartCard* card)
+    bool Message::hmacVerify(SmartCard* card, size_t key_index)
     {
         bytestring buffer;
         buffer += this->getPayload();
         buffer += this->getSignature();
-        return card->hmacVerify(buffer);
+        return card->hmacVerify(buffer, key_index);
     }
 
     bool Message::handleTopicKeyResponse(SmartCard* card, size_t key_index)

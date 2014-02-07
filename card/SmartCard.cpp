@@ -208,12 +208,6 @@ namespace cdax {
         return true;
     }
 
-    bool SmartCard::storeTopicKey(bytestring key)
-    {
-        bytestring *tmp_key = new bytestring(key);
-        return this->transmit(0x03, *tmp_key);
-    }
-
     bool SmartCard::storePrivateKey(CryptoPP::RSA::PrivateKey privKey)
     {
         size_t p_len = privKey.GetPrime1().MinEncodedSize();
@@ -317,28 +311,36 @@ namespace cdax {
         return (msg[0] == 0);
     }
 
-    bool SmartCard::hmac(bytestring &msg)
+    bool SmartCard::storeTopicKey(bytestring key, size_t key_index)
     {
-        return this->transmit(0x20, msg);
+        bytestring *tmp_key = new bytestring(key);
+        bool result = this->transmit(0x03, *tmp_key, (byte) key_index);
+        delete tmp_key;
+        return result;
     }
 
-    bool SmartCard::hmacVerify(bytestring &msg)
+    bool SmartCard::hmac(bytestring &msg, size_t key_index)
     {
-        if(!this->transmit(0x21, msg)) {
+        return this->transmit(0x20, msg, (byte) key_index);
+    }
+
+    bool SmartCard::hmacVerify(bytestring &msg, size_t key_index)
+    {
+        if(!this->transmit(0x21, msg, (byte) key_index)) {
             return false;
         }
 
         return (msg[0] == 0);
     }
 
-    bool SmartCard::aesEncrypt(bytestring &msg)
+    bool SmartCard::aesEncrypt(bytestring &msg, size_t key_index)
     {
-        return this->transmit(0x30, msg);
+        return this->transmit(0x30, msg, (byte) key_index);
     }
 
-    bool SmartCard::aesDecrypt(bytestring &msg)
+    bool SmartCard::aesDecrypt(bytestring &msg, size_t key_index)
     {
-        return this->transmit(0x31, msg);
+        return this->transmit(0x31, msg, (byte) key_index);
     }
 
     bool SmartCard::handleTopicKeyResponse(bytestring &msg, size_t key_index)

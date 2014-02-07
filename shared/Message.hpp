@@ -125,11 +125,11 @@ namespace cdax {
         bool encrypt(SmartCard* card);
         bool decrypt(SmartCard* card);
 
-        bool hmac(SmartCard* card);
-        bool hmacVerify(SmartCard* card);
+        bool hmac(SmartCard* card, size_t key_index = 0);
+        bool hmacVerify(SmartCard* card, size_t key_index = 0);
 
-        bool aesEncrypt(SmartCard* card);
-        bool aesDecrypt(SmartCard* card);
+        bool aesEncrypt(SmartCard* card, size_t key_index = 0);
+        bool aesDecrypt(SmartCard* card, size_t key_index = 0);
 
         bool handleTopicKeyResponse(SmartCard* card, size_t key_index = 0);
 

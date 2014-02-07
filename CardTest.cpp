@@ -13,8 +13,8 @@ const std::string line = std::string(80, '#');
 
 // pseudo random number generator
 CryptoPP::AutoSeededRandomPool prng;
-RSAKeyPair* serverKeyPair;
-CryptoPP::RSA::PublicKey* clientPub;
+RSAKeyPair serverKeyPair;
+CryptoPP::RSA::PublicKey clientPub;
 SmartCard *card = new SmartCard();
 
 // create message
@@ -56,7 +56,7 @@ void signatuteTest()
         log("> ERROR");
     }
 
-    msg.sign(serverKeyPair->getPrivate());
+    msg.sign(serverKeyPair.getPrivate());
     log("> message signed");
 
     if (msg.verify(card)) {
@@ -73,7 +73,7 @@ void encryptionRSATest()
     msg.encrypt(card);
     log("> message encrypted on card");
 
-    if (msg.decrypt(serverKeyPair->getPrivate())) {
+    if (msg.decrypt(serverKeyPair.getPrivate())) {
         log("> message decrypted");
     } else {
         log("> ERROR");
@@ -117,18 +117,20 @@ void hmacTest()
 {
     log("> starting tests...");
 
-    card->storeTopicKey(topic_key_pair.getValue());
+    size_t key_index = 250;
+
+    card->storeTopicKey(topic_key_pair.getValue(), key_index);
 
     msg.hmac(topic_key_pair.getAuthKey());
     std::cout << "> signature: " << msg.getSignature().hex() << std::endl;
 
-    if (msg.hmacVerify(card)) {
+    if (msg.hmacVerify(card, key_index)) {
         log("> messaged hmac verified on card");
     } else {
         log("> ERROR");
     }
 
-    msg.hmac(card);
+    msg.hmac(card, key_index);
     std::cout << "> card signature: " << msg.getSignature().hex() << std::endl;
 
     if (msg.hmacVerify(topic_key_pair.getAuthKey())) {
@@ -145,9 +147,9 @@ void testHighLevel()
     card->setDebug(true);
 
     // test topic join response
-    msg.setData(*topic_key_pair.getValue());
+    msg.setData(topic_key_pair.getValue());
     msg.encrypt(clientPub);
-    msg.sign(serverKeyPair->getPrivate());
+    msg.sign(serverKeyPair.getPrivate());
 
     std::cout << "> topic key pair 0: " << topic_key_pair.getValue().hex() << std::endl;
 
@@ -172,9 +174,9 @@ void testHighLevel()
 
 
     // test topic join response
-    msg.setData(*topic_key_pair.getValue());
+    msg.setData(topic_key_pair.getValue());
     msg.encrypt(clientPub);
-    msg.sign(serverKeyPair->getPrivate());
+    msg.sign(serverKeyPair.getPrivate());
 
     std::cout << "> topic key pair 1: " << topic_key_pair.getValue().hex() << std::endl;
 
@@ -193,6 +195,24 @@ void testHighLevel()
     std::cout << msg;
 }
 
+void testMaxSize()
+{
+    log("> starting tests...");
+
+    card->setDebug(true);
+
+    int len = 1456;
+    byte p1, p2;
+    bytestring data;
+
+    data.resize(len);
+    std::fill(data.BytePtr(), data.BytePtr() + data.size(), 42);
+
+    p1 = (len >> 8) & 0xff;
+    p2 = len & 0xff;
+    card->transmit(0x04, data, p1, p2);
+}
+
 /**
  * Eceute message unit tests
  * @param  argc ignored
@@ -201,39 +221,36 @@ void testHighLevel()
  */
 int main(int argc, char* argv[])
 {
-    card->setDebug(false);
+    card->setDebug(true);
     card->connect();
 
-    if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
-        CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
-        CryptoPP::RSA::PrivateKey* priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+    // if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
+    //     CryptoPP::RSA::PublicKey pub = RSAKeyPair::loadPubKey("data/server-pub.key");
+    //     CryptoPP::RSA::PrivateKey priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
 
-        serverKeyPair = new RSAKeyPair(pub, priv);
-    } else {
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(prng, 2048);
-        serverKeyPair = new RSAKeyPair(params);
+    //     serverKeyPair = RSAKeyPair(pub, priv);
+    // } else {
+    //     CryptoPP::InvertibleRSAFunction params;
+    //     params.GenerateRandomWithKeySize(prng, 2048);
+    //     serverKeyPair = RSAKeyPair(params);
 
-        RSAKeyPair::savePrivKey("data/server-priv.key", serverKeyPair->getPrivate());
-        RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
-    }
+    //     RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
+    //     RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
+    // }
 
-    if (file_exists("data/client-pub.key")) {
-        clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
-    } else {
-        clientPub = card->initialize(serverKeyPair->getPublic());
-        RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
-    }
-
-    if (clientPub == NULL) {
-        log(card->getError());
-    }
+    // if (file_exists("data/client-pub.key")) {
+    //     clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
+    // } else {
+    //     clientPub = card->initialize(serverKeyPair.getPublic());
+    //     RSAKeyPair::saveKey("data/client-pub.key", clientPub);
+    // }
 
     // signatuteTest();
     // encryptionRSATest();
     // encryptionAESTest();
     // hmacTest();
-    testHighLevel();
+    // testHighLevel();
+    testMaxSize();
 
     return 0;
 }

@@ -11,7 +11,7 @@
 using namespace cdax;
 
 CryptoPP::AutoSeededRandomPool prng;
-const std::string DIRECTORY = "../../../paper/shapes/data/";
+const std::string DIRECTORY = "../../paper/shapes/data/";
 
 bytestring generateKey(size_t length)
 {
@@ -57,7 +57,7 @@ void throughputBenchmark()
 
     bytestring data;
     // 16 * 64 = 1024 bytes
-    int len, start = 0, repeat = 2, step = 16, max = 64;
+    int len, start = 0, repeat = 10, step = 16, max = 64;
     byte p1, p2;
 
     std::ofstream file;
@@ -197,7 +197,7 @@ void cryptoBenchmark()
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.aesEncrypt(&key);
+            msg.aesEncrypt(key);
             msg.aesDecrypt(card);
         }
         logTime(file, card, len);
@@ -221,16 +221,16 @@ void rsaBenchmark()
 
     bytestring data;
     // the maximum for this public key is 245 bytes (8 * 30 = 240)
-    int len, start = 1, repeat = 2, step = 8, max = 30;
+    int len, start = 1, repeat = 10, step = 8, max = 30;
     std::ofstream file;
 
-    RSAKeyPair* serverKeyPair;
-    CryptoPP::RSA::PublicKey* clientPub;
+    RSAKeyPair serverKeyPair;
+    CryptoPP::RSA::PublicKey clientPub;
 
     CryptoPP::InvertibleRSAFunction params;
     params.GenerateRandomWithKeySize(prng, 2048);
-    serverKeyPair = new RSAKeyPair(params);
-    clientPub = serverKeyPair->getPublic();
+    serverKeyPair = RSAKeyPair(params);
+    clientPub = serverKeyPair.getPublic();
 
     // Generate RSA Parameters
     if (card == NULL) {
@@ -242,29 +242,24 @@ void rsaBenchmark()
     }
 
     if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
-        CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
-        CryptoPP::RSA::PrivateKey* priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+        CryptoPP::RSA::PublicKey pub = RSAKeyPair::loadPubKey("data/server-pub.key");
+        CryptoPP::RSA::PrivateKey priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
 
-        serverKeyPair = new RSAKeyPair(pub, priv);
+        serverKeyPair = RSAKeyPair(pub, priv);
     } else {
         CryptoPP::InvertibleRSAFunction params;
         params.GenerateRandomWithKeySize(prng, 2048);
-        serverKeyPair = new RSAKeyPair(params);
+        serverKeyPair = RSAKeyPair(params);
 
-        RSAKeyPair::savePrivKey("data/server-priv.key", serverKeyPair->getPrivate());
-        RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
+        RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
+        RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
     }
 
     if (file_exists("data/client-pub.key")) {
         clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
     } else {
-        clientPub = card->initialize(serverKeyPair->getPublic());
-        RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
-    }
-
-    if (clientPub == NULL) {
-        std::cerr << card->getError() << std::endl;
-        return;
+        clientPub = card->initialize(serverKeyPair.getPublic());
+        RSAKeyPair::saveKey("data/client-pub.key", clientPub);
     }
 
     openLogFile(file, "rsa_sign.dat");
@@ -290,7 +285,7 @@ void rsaBenchmark()
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.sign(serverKeyPair->getPrivate());
+            msg.sign(serverKeyPair.getPrivate());
             msg.verify(card);
         }
         logTime(file, card, len);
@@ -341,13 +336,13 @@ void highLevelBenchmark()
     Message msg("test_id", "test_topic", "test_data");
 
     bytestring data;
-    int len, start = 1, repeat = 2, step = 16, max = 64;
+    int len, start = 1, repeat = 10, step = 16, max = 64;
     std::ofstream file;
 
-    RSAKeyPair* serverKeyPair;
-    CryptoPP::RSA::PublicKey* clientPub;
+    RSAKeyPair serverKeyPair;
+    CryptoPP::RSA::PublicKey clientPub;
 
-    TopicKeyPair *topic_key_pair = new TopicKeyPair(
+    TopicKeyPair topic_key_pair = TopicKeyPair(
         generateKey(TopicKeyPair::KeyLength),
         generateKey(TopicKeyPair::KeyLength)
     );
@@ -362,29 +357,24 @@ void highLevelBenchmark()
     }
 
     if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
-        CryptoPP::RSA::PublicKey* pub = RSAKeyPair::loadPubKey("data/server-pub.key");
-        CryptoPP::RSA::PrivateKey* priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+        CryptoPP::RSA::PublicKey pub = RSAKeyPair::loadPubKey("data/server-pub.key");
+        CryptoPP::RSA::PrivateKey priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
 
-        serverKeyPair = new RSAKeyPair(pub, priv);
+        serverKeyPair = RSAKeyPair(pub, priv);
     } else {
         CryptoPP::InvertibleRSAFunction params;
         params.GenerateRandomWithKeySize(prng, 2048);
-        serverKeyPair = new RSAKeyPair(params);
+        serverKeyPair = RSAKeyPair(params);
 
-        RSAKeyPair::savePrivKey("data/server-priv.key", serverKeyPair->getPrivate());
-        RSAKeyPair::savePubKey("data/server-pub.key", serverKeyPair->getPublic());
+        RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
+        RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
     }
 
     if (file_exists("data/client-pub.key")) {
         clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
     } else {
-        clientPub = card->initialize(serverKeyPair->getPublic());
-        RSAKeyPair::savePubKey("data/client-pub.key", clientPub);
-    }
-
-    if (clientPub == NULL) {
-        std::cerr << card->getError() << std::endl;
-        return;
+        clientPub = card->initialize(serverKeyPair.getPublic());
+        RSAKeyPair::saveKey("data/client-pub.key", clientPub);
     }
 
     msg.setData("topic_join");
@@ -399,9 +389,9 @@ void highLevelBenchmark()
     }
     logTime(file, card, len);
 
-    msg.setData(*topic_key_pair->getValue());
+    msg.setData(topic_key_pair.getValue());
     msg.encrypt(clientPub);
-    msg.sign(serverKeyPair->getPrivate());
+    msg.sign(serverKeyPair.getPrivate());
     len = msg.getPayload().size();
 
     openLogFile(file, "topic_key_response.dat");
@@ -438,8 +428,8 @@ void highLevelBenchmark()
         for (int j = 0; j < repeat; j++) {
             data.resize(len);
             msg.setData(data);
-            msg.aesEncrypt(topic_key_pair->getEncKey());
-            msg.hmac(topic_key_pair->getAuthKey());
+            msg.aesEncrypt(topic_key_pair.getEncKey());
+            msg.hmac(topic_key_pair.getAuthKey());
             msg.decode(card);
         }
         logTime(file, card, len);
@@ -458,10 +448,10 @@ void highLevelBenchmark()
  */
 int main(int argc, char* argv[])
 {
-    // throughputBenchmark();
-    // cryptoBenchmark();
-    // rsaBenchmark();
-    // highLevelBenchmark();
+    throughputBenchmark();
+    cryptoBenchmark();
+    rsaBenchmark();
+    highLevelBenchmark();
 
     return 0;
 }
