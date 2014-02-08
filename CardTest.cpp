@@ -195,22 +195,14 @@ void testHighLevel()
     std::cout << msg;
 }
 
-void testMaxSize()
+void test()
 {
     log("> starting tests...");
 
     card->setDebug(true);
-
-    int len = 1456;
-    byte p1, p2;
     bytestring data;
 
-    data.resize(len);
-    std::fill(data.BytePtr(), data.BytePtr() + data.size(), 42);
-
-    p1 = (len >> 8) & 0xff;
-    p2 = len & 0xff;
-    card->transmit(0x04, data, p1, p2);
+    card->transmit(0x14, data);
 }
 
 /**
@@ -250,7 +242,7 @@ int main(int argc, char* argv[])
     // encryptionAESTest();
     // hmacTest();
     // testHighLevel();
-    testMaxSize();
+    test();
 
     return 0;
 }

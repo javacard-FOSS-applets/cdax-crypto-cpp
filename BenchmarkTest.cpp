@@ -142,7 +142,7 @@ void cryptoBenchmark()
 
     bytestring data;
     // 16 * 64 = 1024 bytes
-    int len, start = 1, repeat = 10, step = 16, max = 64;
+    int len, start = 1, repeat = 1, step = 16, max = 64;
 
     std::ofstream file;
     openLogFile(file, "hmac.dat");
@@ -448,10 +448,10 @@ void highLevelBenchmark()
  */
 int main(int argc, char* argv[])
 {
-    throughputBenchmark();
+    // throughputBenchmark();
     cryptoBenchmark();
-    rsaBenchmark();
-    highLevelBenchmark();
+    // rsaBenchmark();
+    // highLevelBenchmark();
 
     return 0;
 }

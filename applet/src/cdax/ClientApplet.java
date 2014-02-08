@@ -16,8 +16,13 @@ import javacard.security.HMACKey;
 import javacard.security.KeyPair;
 import javacard.security.KeyBuilder;
 import javacard.security.Signature;
+
 import javacard.security.RSAPrivateCrtKey;
 import javacard.security.RSAPublicKey;
+
+import javacard.security.ECPublicKey;
+import javacard.security.ECPrivateKey;
+
 import javacard.security.CryptoException;
 import javacard.security.MessageDigest;
 import javacard.security.RandomData;
@@ -42,6 +47,13 @@ public class ClientApplet extends Applet implements ExtendedLength
     private static final byte RSA_VERIFY = (byte) 0x11;
     private static final byte RSA_ENC = (byte) 0x12;
     private static final byte RSA_DEC = (byte) 0x13;
+
+    private static final byte ECC_GENERATE = (byte) 0x14;
+    private static final byte ECC_SIGN = (byte) 0x15;
+    private static final byte ECC_VERIFY = (byte) 0x16;
+    private static final byte ECC_ENC = (byte) 0x17;
+    private static final byte ECC_DEC = (byte) 0x18;
+
     private static final byte HMAC_SIGN = (byte) 0x20;
     private static final byte HMAC_VERIFY = (byte) 0x21;
     private static final byte AES_ENC = (byte) 0x30;
@@ -78,8 +90,12 @@ public class ClientApplet extends Applet implements ExtendedLength
     private byte[] aesKeys;
     private AESKey aesKey;
 
+    // temp hmac value array
+    private byte[] hmacValue;
+
     // client RSA key pair
     private KeyPair keyPair;
+    private KeyPair eccKeyPair;
     private Signature signature;
 
     private Cipher rsaCipher;
@@ -94,8 +110,10 @@ public class ClientApplet extends Applet implements ExtendedLength
         this.masterKey = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_2048,false);
         this.hmacKeys = new byte[(short) (HMAC_KEY_LENGTH * TOPIC_KEY_COUNT)];
         this.aesKeys = new byte[(short) (AES_KEY_SIZE * TOPIC_KEY_COUNT)];
+        this.hmacValue = new byte[MessageDigest.LENGTH_SHA_256];
         this.aesKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
         this.keyPair = new KeyPair(KeyPair.ALG_RSA_CRT, KeyBuilder.LENGTH_RSA_2048);
+        this.eccKeyPair = new KeyPair(KeyPair.ALG_EC_FP, KeyBuilder.LENGTH_EC_FP_192);
         this.rsaCipher = Cipher.getInstance(Cipher.ALG_RSA_PKCS1, false);
         this.aesCipher = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
         this.random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
@@ -170,8 +188,11 @@ public class ClientApplet extends Applet implements ExtendedLength
             case RSA_DEC:
                 apdu.setOutgoingAndSend(ZERO, this.rsa_decrypt(buffer, HEADER_LEN, LEN));
                 break;
+            case ECC_GENERATE:
+                apdu.setOutgoingAndSend(ZERO, this.generate_ecc(buffer));
+                break;
             case HMAC_SIGN:
-                this.hmac(buffer, HEADER_LEN, LEN, P1, ZERO);
+                this.hmac(buffer, HEADER_LEN, LEN, P1, buffer, ZERO);
                 apdu.setOutgoingAndSend(ZERO, MessageDigest.LENGTH_SHA_256);
                 break;
             case HMAC_VERIFY:
@@ -220,6 +241,33 @@ public class ClientApplet extends Applet implements ExtendedLength
         return (short) (RSA_MOD_LEN + RSA_EXP_LEN);
     }
 
+    private short generate_ecc(byte[] buffer)
+    {
+        this.eccKeyPair.genKeyPair();
+        ECPublicKey pub = (ECPublicKey) this.eccKeyPair.getPublic();
+
+        short offset = pub.getA(buffer, ZERO);
+        offset += pub.getB(buffer, offset);
+
+        offset += pub.getField(buffer, offset);
+        offset += pub.getG(buffer, offset);
+        short k = pub.getK();
+        // Util.setShort(buffer, offset, pub.getK());
+        // offset += (short) 2;
+        // offset += pub.getR(buffer, offset);
+        // offset += pub.getW(buffer, offset);
+
+
+        // ECPublicKey pub = (ECPublicKey) keyPair.getPublic();
+        // pub.setW(buffer, ZERO);
+
+        // RSAPublicKey pub = (RSAPublicKey) this.eccKeyPair.getPublic();
+        // short mod_len = pub.getModulus(buffer, ZERO);
+        // short exp_len = pub.getExponent(buffer, mod_len);
+        // return (short) (mod_len + exp_len);
+        return offset;
+    }
+
     private void store_master(byte[] buffer, short offset)
     {
         this.masterKey.setModulus(buffer, offset, RSA_MOD_LEN);
@@ -254,7 +302,7 @@ public class ClientApplet extends Applet implements ExtendedLength
         // calculate to total length of the data over which the hmac will be generated
         short payload_len = (short) (length - data_len - 2 + cipher_len);
         // calculate hmac over the payload (message meta data + topic data)
-        this.hmac(buffer, (short) (offset + 2), payload_len, key_index, hmac_offset);
+        this.hmac(buffer, (short) (offset + 2), payload_len, key_index, buffer, hmac_offset);
         // calculate length of aes encrypted data + the length of the hmac
         short encoded_len = (short) (cipher_len + MessageDigest.LENGTH_SHA_256);
         // return the encrypted data with the appended 32 byte hmac
@@ -365,19 +413,19 @@ public class ClientApplet extends Applet implements ExtendedLength
     private byte verify_hmac(byte[] buffer, short offset, short length, short key_index)
     {
         // calculate new hmac
-        this.hmac(buffer, offset, (short) (length - MessageDigest.LENGTH_SHA_256), key_index, (short) (offset + length));
+        this.hmac(buffer, offset, (short) (length - MessageDigest.LENGTH_SHA_256), key_index, this.hmacValue, ZERO);
         // compare the hmac's
-        return Util.arrayCompare(buffer, (short) (offset + length - MessageDigest.LENGTH_SHA_256), buffer, (short) (offset + length), MessageDigest.LENGTH_SHA_256);
+        return Util.arrayCompare(buffer, (short) (offset + length - MessageDigest.LENGTH_SHA_256), this.hmacValue, ZERO, MessageDigest.LENGTH_SHA_256);
     }
 
-    private void hmac(byte[] buffer, short offset, short length, short key_index, short target_offset)
+    private void hmac(byte[] buffer, short offset, short length, short key_index, byte[] target, short target_offset)
     {
         // place data after the ipad value (reserve 64 byteses before the payload data)
         Util.arrayCopyNonAtomic(buffer, offset, buffer, (short) (target_offset + HMAC_BLOCK_SIZE), length);
         Util.arrayCopyNonAtomic(this.hmacKeys, (short) (HMAC_KEY_LENGTH * key_index), buffer, target_offset, HMAC_BLOCK_SIZE);
         this.hash.doFinal(buffer, target_offset, (short) (length + HMAC_BLOCK_SIZE), buffer, (short) (target_offset + HMAC_BLOCK_SIZE));
         Util.arrayCopyNonAtomic(this.hmacKeys, (short) (HMAC_KEY_LENGTH * key_index + HMAC_BLOCK_SIZE), buffer, target_offset, HMAC_BLOCK_SIZE);
-        this.hash.doFinal(buffer, target_offset, (short) (HMAC_BLOCK_SIZE + MessageDigest.LENGTH_SHA_256), buffer, target_offset);
+        this.hash.doFinal(buffer, target_offset, (short) (HMAC_BLOCK_SIZE + MessageDigest.LENGTH_SHA_256), target, target_offset);
     }
 
 }
