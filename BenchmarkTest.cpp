@@ -142,7 +142,7 @@ void cryptoBenchmark()
 
     bytestring data;
     // 16 * 64 = 1024 bytes
-    int len, start = 1, repeat = 1, step = 16, max = 64;
+    int len, start = 1, repeat = 10, step = 16, max = 64;
 
     std::ofstream file;
     openLogFile(file, "hmac.dat");
@@ -384,7 +384,9 @@ void highLevelBenchmark()
 
     std::cout << "SIGN TOPIC KEY REQUEST:" << std::endl;
     card->startTimer();
-    for (int j = 0; j < repeat; j++) {
+    for (int j = 0; j < repeat * 2; j++) {
+        msg.setData("topic_join");
+
         msg.sign(card);
     }
     logTime(file, card, len);
@@ -398,12 +400,17 @@ void highLevelBenchmark()
 
     std::cout << "HANDLE TOPIC KEY RESPONSE:" << std::endl;
     card->startTimer();
-    for (int j = 0; j < repeat; j++) {
+    for (int j = 0; j < repeat * 2; j++) {
+        msg.setData(topic_key_pair.getValue());
+        msg.encrypt(clientPub);
+        msg.sign(serverKeyPair.getPrivate());
+
         msg.handleTopicKeyResponse(card);
     }
     logTime(file, card, len);
 
     msg.setSignature("");
+
 
     openLogFile(file, "topic_encode.dat");
 
@@ -448,10 +455,10 @@ void highLevelBenchmark()
  */
 int main(int argc, char* argv[])
 {
-    // throughputBenchmark();
+    throughputBenchmark();
     cryptoBenchmark();
-    // rsaBenchmark();
-    // highLevelBenchmark();
+    rsaBenchmark();
+    highLevelBenchmark();
 
     return 0;
 }

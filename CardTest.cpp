@@ -195,16 +195,6 @@ void testHighLevel()
     std::cout << msg;
 }
 
-void test()
-{
-    log("> starting tests...");
-
-    card->setDebug(true);
-    bytestring data;
-
-    card->transmit(0x14, data);
-}
-
 /**
  * Eceute message unit tests
  * @param  argc ignored
@@ -216,33 +206,32 @@ int main(int argc, char* argv[])
     card->setDebug(true);
     card->connect();
 
-    // if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
-    //     CryptoPP::RSA::PublicKey pub = RSAKeyPair::loadPubKey("data/server-pub.key");
-    //     CryptoPP::RSA::PrivateKey priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
+    if (file_exists("data/server-priv.key") && file_exists("data/server-pub.key")) {
+        CryptoPP::RSA::PublicKey pub = RSAKeyPair::loadPubKey("data/server-pub.key");
+        CryptoPP::RSA::PrivateKey priv = RSAKeyPair::loadPrivKey("data/server-priv.key");
 
-    //     serverKeyPair = RSAKeyPair(pub, priv);
-    // } else {
-    //     CryptoPP::InvertibleRSAFunction params;
-    //     params.GenerateRandomWithKeySize(prng, 2048);
-    //     serverKeyPair = RSAKeyPair(params);
+        serverKeyPair = RSAKeyPair(pub, priv);
+    } else {
+        CryptoPP::InvertibleRSAFunction params;
+        params.GenerateRandomWithKeySize(prng, 2048);
+        serverKeyPair = RSAKeyPair(params);
 
-    //     RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
-    //     RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
-    // }
+        RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
+        RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
+    }
 
-    // if (file_exists("data/client-pub.key")) {
-    //     clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
-    // } else {
-    //     clientPub = card->initialize(serverKeyPair.getPublic());
-    //     RSAKeyPair::saveKey("data/client-pub.key", clientPub);
-    // }
+    if (file_exists("data/client-pub.key")) {
+        clientPub = RSAKeyPair::loadPubKey("data/client-pub.key");
+    } else {
+        clientPub = card->initialize(serverKeyPair.getPublic());
+        RSAKeyPair::saveKey("data/client-pub.key", clientPub);
+    }
 
-    // signatuteTest();
-    // encryptionRSATest();
-    // encryptionAESTest();
-    // hmacTest();
-    // testHighLevel();
-    test();
+    signatuteTest();
+    encryptionRSATest();
+    encryptionAESTest();
+    hmacTest();
+    testHighLevel();
 
     return 0;
 }

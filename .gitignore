@@ -1,4 +1,4 @@
-build/
-data/
-JCKIT/
-applet/bin/
+/build/
+/data/
+/JCKIT/
+/applet/bin/
