@@ -455,9 +455,9 @@ void highLevelBenchmark()
  */
 int main(int argc, char* argv[])
 {
-    throughputBenchmark();
-    cryptoBenchmark();
-    rsaBenchmark();
+    // throughputBenchmark();
+    // cryptoBenchmark();
+    // rsaBenchmark();
     highLevelBenchmark();
 
     return 0;
