@@ -27,11 +27,11 @@ RSAKeyPair* generateKeyPair(size_t length)
  * @param  int length
  * @return bytestring
  */
-bytestring* generateKey(size_t length)
+bytestring generateKey(size_t length)
 {
     CryptoPP::AutoSeededRandomPool prng;
-    bytestring* key = new bytestring(length);
-    prng.GenerateBlock(key->BytePtr(), key->size());
+    bytestring key(length);
+    prng.GenerateBlock(key.BytePtr(), key.size());
     return key;
 }
 
@@ -43,10 +43,10 @@ void testEncrypt()
     Message *msg = new Message();
     msg->setData("foo bar");
 
-    bytestring* aes_key = generateKey(CryptoPP::AES::DEFAULT_KEYLENGTH);
+    bytestring aes_key = generateKey(CryptoPP::AES::DEFAULT_KEYLENGTH);
     std::cout << "message plaintext: " << msg->getData().str() << std::endl;
     std::cout << "message plaintext: " << msg->getData().hex() << std::endl;
-    std::cout << "AES key: " << aes_key->hex() << std::endl;
+    std::cout << "AES key: " << aes_key.hex() << std::endl;
 
     msg->aesEncrypt(aes_key);
     std::cout << "AES ciphertext: " << msg->getData().hex() << std::endl;
@@ -63,8 +63,8 @@ void testHMAC()
     Message *msg = new Message();
     msg->setData("foo bar");
 
-    bytestring* hmac_key = generateKey(16);
-    std::cout << "HMAC key: " << hmac_key->hex() << std::endl;
+    bytestring hmac_key = generateKey(16);
+    std::cout << "HMAC key: " << hmac_key.hex() << std::endl;
 
     msg->hmac(hmac_key);
     std::cout << "HMAC: " << msg->getSignature().hex() << std::endl;
@@ -103,7 +103,7 @@ void testEncode()
     Message msg = Message("foo", "bar", "baz");
 
     RSAKeyPair* keypair = generateKeyPair(2048);
-    bytestring* key = generateKey(16);
+    bytestring key = generateKey(16);
 
     msg.encrypt(keypair->getPublic());
     msg.sign(keypair->getPrivate());
@@ -111,12 +111,12 @@ void testEncode()
 
     std::cout << "Message:" << msg << std::endl;
 
-    bytestring encoded = msg.encode();
+    bytestring encoded = (bytestring) msg.encode();
 
     std::cout << "Encoded:" << encoded.hex() << std::endl;
 
     Message msg2 = Message();
-    msg2.decode(encoded);
+    msg2.decode(encoded.str());
 
     std::cout << "Decoded:" << msg2 << std::endl;
 }
