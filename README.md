@@ -11,13 +11,13 @@ C++ dependencies:
 To install the dependencies on OSX install [MacPorts](http://www.macports.org/) and run:
 
 ```bash
-sudo port install boost libcryptopp
+sudo port install boost libcryptopp cmake
 ```
 
 You can also use [Homebrew](http://brew.sh/):
 
 ```bash
-brew install boost cryptopp
+brew install boost cryptopp cmake
 ```
 
 On Debian Linux (or Ubuntu) install Boost and Crypto++ with aptitude:
