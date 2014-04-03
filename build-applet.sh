@@ -30,7 +30,7 @@ java \
     1> /dev/null
 echo " ...done"
 
-echo -n "> uploadeding CAP file"
+echo -n "> uploading CAP file"
 java \
     -d32 \
     -jar ../apps/gpj/gpj.jar \

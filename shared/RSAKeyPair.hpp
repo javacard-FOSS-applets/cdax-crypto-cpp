@@ -22,8 +22,8 @@ namespace cdax {
         static const int KeyLength = 2048;
 
         RSAKeyPair();
+        RSAKeyPair(int length);
         RSAKeyPair(CryptoPP::RSA::PublicKey pub, CryptoPP::RSA::PrivateKey priv);
-        RSAKeyPair(CryptoPP::InvertibleRSAFunction &params);
 
         void setPublic(CryptoPP::RSA::PublicKey pub);
         void setPrivate(CryptoPP::RSA::PrivateKey priv);

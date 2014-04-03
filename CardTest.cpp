@@ -12,7 +12,6 @@ using namespace cdax;
 const std::string line = std::string(80, '#');
 
 // pseudo random number generator
-CryptoPP::AutoSeededRandomPool prng;
 RSAKeyPair serverKeyPair;
 CryptoPP::RSA::PublicKey clientPub;
 SmartCard *card = new SmartCard();
@@ -212,9 +211,7 @@ int main(int argc, char* argv[])
 
         serverKeyPair = RSAKeyPair(pub, priv);
     } else {
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(prng, 2048);
-        serverKeyPair = RSAKeyPair(params);
+        serverKeyPair = RSAKeyPair(2048);
 
         RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
         RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
@@ -232,6 +229,9 @@ int main(int argc, char* argv[])
     encryptionAESTest();
     hmacTest();
     testHighLevel();
+
+    log("> releasing card");
+    card->release();
 
     return 0;
 }

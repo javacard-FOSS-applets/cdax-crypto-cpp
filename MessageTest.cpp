@@ -9,20 +9,6 @@ using namespace cdax;
 const std::string line = std::string(80, '#');
 
 /**
- * Generate a RSa key pair
- * @param  int length
- * @return RSAKeyPair
- */
-RSAKeyPair* generateKeyPair(size_t length)
-{
-    CryptoPP::AutoSeededRandomPool prng;
-    CryptoPP::InvertibleRSAFunction params;
-    params.GenerateRandomWithKeySize(prng, length);
-    RSAKeyPair* keyPair = new RSAKeyPair(params);
-    return keyPair;
-}
-
-/**
  * Generate AES or HMAC key
  * @param  int length
  * @return bytestring
@@ -83,7 +69,7 @@ void testRSA()
 
     std::cout << "RSA plaintext: " << msg->getData().hex() << std::endl;
 
-    RSAKeyPair* keypair = generateKeyPair(2048);
+    RSAKeyPair* keypair = new RSAKeyPair(length);
 
     msg->encrypt(keypair->getPublic());
     std::cout << "RSA ciphertext: " << msg->getData().hex() << std::endl;
@@ -102,7 +88,7 @@ void testEncode()
 {
     Message msg = Message("foo", "bar", "baz");
 
-    RSAKeyPair* keypair = generateKeyPair(2048);
+    RSAKeyPair* keypair = new RSAKeyPair(length);
     bytestring key = generateKey(16);
 
     msg.encrypt(keypair->getPublic());

@@ -34,3 +34,5 @@ cmake ..
 make
 ./simulation
 ```
+
+Drivers for the reader can be found at http://support.identive-group.com/npa_downloads.php

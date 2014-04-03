@@ -227,9 +227,7 @@ void rsaBenchmark()
     RSAKeyPair serverKeyPair;
     CryptoPP::RSA::PublicKey clientPub;
 
-    CryptoPP::InvertibleRSAFunction params;
-    params.GenerateRandomWithKeySize(prng, 2048);
-    serverKeyPair = RSAKeyPair(params);
+    serverKeyPair = RSAKeyPair(2048);
     clientPub = serverKeyPair.getPublic();
 
     // Generate RSA Parameters
@@ -247,9 +245,7 @@ void rsaBenchmark()
 
         serverKeyPair = RSAKeyPair(pub, priv);
     } else {
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(prng, 2048);
-        serverKeyPair = RSAKeyPair(params);
+        serverKeyPair = RSAKeyPair(2048);
 
         RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
         RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
@@ -362,9 +358,7 @@ void highLevelBenchmark()
 
         serverKeyPair = RSAKeyPair(pub, priv);
     } else {
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(prng, 2048);
-        serverKeyPair = RSAKeyPair(params);
+        serverKeyPair = RSAKeyPair(2048);
 
         RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
         RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());

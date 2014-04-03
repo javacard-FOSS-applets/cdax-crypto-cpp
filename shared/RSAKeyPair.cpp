@@ -1,6 +1,8 @@
 
 #include "RSAKeyPair.hpp"
 
+CryptoPP::AutoSeededRandomPool prng;
+
 namespace cdax {
 
     /**
@@ -8,7 +10,7 @@ namespace cdax {
      */
     RSAKeyPair::RSAKeyPair()
     {
-        // pass
+
     }
 
     /**
@@ -16,10 +18,12 @@ namespace cdax {
      *
      * @param params CryptoPP::InvertibleRSAFunction params
      */
-    RSAKeyPair::RSAKeyPair(CryptoPP::InvertibleRSAFunction &params)
+    RSAKeyPair::RSAKeyPair(int length)
     {
-         this->privateKey = CryptoPP::RSA::PrivateKey(params);
-         this->publicKey = CryptoPP::RSA::PublicKey(params);
+        CryptoPP::InvertibleRSAFunction params;
+        params.GenerateRandomWithKeySize(prng, length);
+        this->privateKey = CryptoPP::RSA::PrivateKey(params);
+        this->publicKey = CryptoPP::RSA::PublicKey(params);
     }
 
     RSAKeyPair::RSAKeyPair(CryptoPP::RSA::PublicKey pub, CryptoPP::RSA::PrivateKey priv)

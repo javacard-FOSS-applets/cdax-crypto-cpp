@@ -60,6 +60,16 @@ add_executable( msg_test MessageTest
 )
 target_link_libraries( msg_test ${LIBS} )
 
+add_executable( msg_benchmark MessageBenchmark
+    card/SmartCard
+    shared/Message
+    shared/bytestring
+    shared/TopicKeyPair
+    shared/RSAKeyPair
+    shared/Common
+)
+target_link_libraries( msg_benchmark ${LIBS} )
+
 add_executable( benchmark_test BenchmarkTest
     card/SmartCard
     shared/Message
