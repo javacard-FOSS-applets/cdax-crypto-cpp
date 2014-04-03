@@ -169,16 +169,28 @@ public class ClientApplet extends Applet implements ExtendedLength
 
             // crypto tests
             case RSA_SIGN:
+                if (P2 == 1) {
+                    this.rsa_sign(buffer, HEADER_LEN, LEN);
+                }
                 apdu.setOutgoingAndSend(ZERO, this.rsa_sign(buffer, HEADER_LEN, LEN));
                 break;
             case RSA_VERIFY:
+                if (P2 == 1) {
+                    this.rsa_verify(buffer, HEADER_LEN, LEN);
+                }
                 buffer[0] = this.rsa_verify(buffer, HEADER_LEN, LEN);
                 apdu.setOutgoingAndSend(ZERO, ONE);
                 break;
             case RSA_ENC:
+                if (P2 == 1) {
+                    this.rsa_encrypt(buffer, HEADER_LEN, LEN);
+                }
                 apdu.setOutgoingAndSend(ZERO, this.rsa_encrypt(buffer, HEADER_LEN, LEN));
                 break;
             case RSA_DEC:
+                if (P2 == 1) {
+                    this.rsa_decrypt(buffer, HEADER_LEN, LEN);
+                }
                 apdu.setOutgoingAndSend(ZERO, this.rsa_decrypt(buffer, HEADER_LEN, LEN));
                 break;
 
@@ -187,17 +199,29 @@ public class ClientApplet extends Applet implements ExtendedLength
                 apdu.setOutgoingAndSend(HEADER_LEN, LEN);
                 break;
             case HMAC_SIGN:
+                if (P2 == 1) {
+                    this.hmac(buffer, HEADER_LEN, LEN, P1, buffer, ZERO);
+                }
                 this.hmac(buffer, HEADER_LEN, LEN, P1, buffer, ZERO);
                 apdu.setOutgoingAndSend(ZERO, MessageDigest.LENGTH_SHA_256);
                 break;
             case HMAC_VERIFY:
+                if (P2 == 1) {
+                    this.verify_hmac(buffer, HEADER_LEN, LEN, P1);
+                }
                 buffer[0] = this.verify_hmac(buffer, HEADER_LEN, LEN, P1);
                 apdu.setOutgoingAndSend(ZERO, ONE);
                 break;
             case AES_ENC:
+                if (P2 == 1) {
+                    this.aes_encrypt(buffer, HEADER_LEN, LEN, P1, ZERO, ZERO);
+                }
                 apdu.setOutgoingAndSend(ZERO, this.aes_encrypt(buffer, HEADER_LEN, LEN, P1, ZERO, ZERO));
                 break;
             case AES_DEC:
+                if (P2 == 1) {
+                    this.aes_decrypt(buffer, HEADER_LEN, LEN, P1, ZERO);
+                }
                 apdu.setOutgoingAndSend(ZERO, this.aes_decrypt(buffer, HEADER_LEN, LEN, P1, ZERO));
                 break;
 

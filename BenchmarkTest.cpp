@@ -10,7 +10,6 @@
 
 using namespace cdax;
 
-CryptoPP::AutoSeededRandomPool prng;
 const std::string DIRECTORY = "../../paper/shapes/data/";
 
 bytestring generateKey(size_t length)
@@ -132,8 +131,7 @@ void cryptoBenchmark()
     Message msg("test_id", "test_topic", "test_data");
 
     // key
-    bytestring key(16);
-    prng.GenerateBlock(key.BytePtr(), key.size());
+    bytestring key = generateKey(16);
 
     if (!card->storeTopicKey(key)) {
         std::cerr << "Could not store sym key on card" << std::endl;
@@ -221,7 +219,7 @@ void rsaBenchmark()
 
     bytestring data;
     // the maximum for this public key is 245 bytes (8 * 30 = 240)
-    int len, start = 1, repeat = 10, step = 8, max = 30;
+    int len, start = 1, repeat = 1, step = 8, max = 30;
     std::ofstream file;
 
     RSAKeyPair serverKeyPair;
@@ -451,8 +449,8 @@ int main(int argc, char* argv[])
 {
     // throughputBenchmark();
     // cryptoBenchmark();
-    // rsaBenchmark();
-    highLevelBenchmark();
+    rsaBenchmark();
+    // highLevelBenchmark();
 
     return 0;
 }

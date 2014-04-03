@@ -122,6 +122,7 @@ namespace cdax {
 
     void SmartCard::release()
     {
+        SCardCancel(this->context);
         SCardReleaseContext(this->context);
     }
 
@@ -187,16 +188,16 @@ namespace cdax {
         elapsed = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
         this->timer.push_back(elapsed);
 
-        if (rv != SCARD_S_SUCCESS) {
-            this->last_error = pcsc_stringify_error(rv);
-            return false;
-        }
 
         data.Assign(response_buffer.BytePtr(), resp_buf_len);
-        // data = response_buffer;
 
         if (this->debug) {
             std::cout << "> recv: " << data.hex() << std::endl;
+        }
+
+        if (rv != SCARD_S_SUCCESS) {
+            this->last_error = pcsc_stringify_error(rv);
+            return false;
         }
 
         if (data[data.size() - 2] != 0x90 || data[data.size() - 1] != 0x00) {

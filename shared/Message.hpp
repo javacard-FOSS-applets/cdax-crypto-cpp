@@ -49,9 +49,6 @@ namespace cdax {
         friend std::ostream &operator<< (std::ostream &out, const Message &msg);
         friend class boost::serialization::access;
 
-        void addPKCS7();
-        void removePKCS7();
-
         bytestring generateIV(int length);
         bytestring getDataLength();
 
@@ -106,6 +103,9 @@ namespace cdax {
 
         void setSignature(bytestring sig);
         const bytestring getSignature() const;
+
+        void addPKCS7();
+        void removePKCS7();
 
         void aesEncrypt(bytestring key);
         bool aesDecrypt(bytestring key);
