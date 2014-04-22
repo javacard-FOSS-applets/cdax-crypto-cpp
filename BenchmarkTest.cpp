@@ -212,7 +212,7 @@ void rsaBenchmark()
 
     SmartCard *card = new SmartCard();
 
-    card->setDebug(false);
+    card->setDebug(true);
 
     // message stub
     Message msg("test_id", "test_topic", "test_data");

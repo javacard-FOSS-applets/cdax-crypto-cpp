@@ -7,6 +7,8 @@ import javacard.framework.ISOException;
 import javacard.framework.Util;
 import javacard.framework.JCSystem;
 import javacard.framework.SystemException;
+import javacard.framework.CardRuntimeException;
+
 
 import javacardx.apdu.ExtendedLength;
 import javacardx.crypto.Cipher;
@@ -16,6 +18,7 @@ import javacard.security.HMACKey;
 import javacard.security.KeyPair;
 import javacard.security.KeyBuilder;
 import javacard.security.Signature;
+import javacard.security.CryptoException;
 
 import javacard.security.RSAPrivateCrtKey;
 import javacard.security.RSAPublicKey;
@@ -67,7 +70,7 @@ public class ClientApplet extends Applet implements ExtendedLength
     private static final short HMAC_BLOCK_SIZE = 64;
     private static final short HMAC_KEY_SIZE = 16;
     private static final short HMAC_KEY_LENGTH = 128;
-    private static final short HMAC_BUFFER_SIZE = 2048;
+    private static final short HMAC_BUFFER_SIZE = 1536;
 
     // rsa key length in bytes
     private static final short RSA_CRT_PARAM_LEN = 128;
@@ -79,7 +82,7 @@ public class ClientApplet extends Applet implements ExtendedLength
     private RSAPublicKey masterKey;
 
     // topic key count
-    private static final short TOPIC_KEY_COUNT = 255;
+    private static final short TOPIC_KEY_COUNT = 32;
 
     // private HMACKey hmacKeys;
     private byte[] hmacKeys;
@@ -105,17 +108,19 @@ public class ClientApplet extends Applet implements ExtendedLength
         this.register();
 
         this.masterKey = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_2048, false);
-        this.hmacKeys = new byte[(short) (HMAC_KEY_LENGTH * TOPIC_KEY_COUNT)];
-        this.aesKeys = new byte[(short) (AES_KEY_SIZE * TOPIC_KEY_COUNT)];
-        this.hmacBuffer = JCSystem.makeTransientByteArray(HMAC_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT);;
-        this.aesKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
         this.keyPair = new KeyPair(KeyPair.ALG_RSA_CRT, KeyBuilder.LENGTH_RSA_2048);
+
+        this.signature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
         this.rsaCipher = Cipher.getInstance(Cipher.ALG_RSA_PKCS1, false);
+
+        this.aesKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
         this.aesCipher = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
         this.random = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         this.hash = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
-        this.signature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
 
+        this.hmacKeys = new byte[(short) (HMAC_KEY_LENGTH * TOPIC_KEY_COUNT)];
+        this.aesKeys = new byte[(short) (AES_KEY_SIZE * TOPIC_KEY_COUNT)];
+        this.hmacBuffer = JCSystem.makeTransientByteArray(HMAC_BUFFER_SIZE, JCSystem.CLEAR_ON_DESELECT);
     }
 
     public static void install(byte[] buffer, short offset, byte length)
@@ -145,96 +150,101 @@ public class ClientApplet extends Applet implements ExtendedLength
             LEN = Util.getShort(buffer, (short) (ISO7816.OFFSET_LC + ONE));
         }
 
-        switch (buffer[ISO7816.OFFSET_INS] & 0xFF)
-        {
-            // highlevel functions
-            case GEN_KEYPAIR:
-                apdu.setOutgoingAndSend(ZERO, this.generate_keyPair(buffer));
-                break;
-            case STORE_MASTER:
-                this.store_master(buffer, HEADER_LEN);
-                apdu.setOutgoing();
-                break;
-            case STORE_TOPIC_KEY:
-                this.store_topic_key(buffer, HEADER_LEN, LEN);
-                this.store_key(buffer, ZERO, P1);
-                apdu.setOutgoing();
-                break;
-            case ENCODE:
-                this.encode(apdu, buffer, HEADER_LEN, LEN, P1);
-                break;
-            case DECODE:
-                this.decode(apdu, buffer, HEADER_LEN, LEN, P1);
-                break;
+        try {
+            switch (buffer[ISO7816.OFFSET_INS] & 0xFF)
+            {
+                // highlevel functions
+                case GEN_KEYPAIR:
+                    apdu.setOutgoingAndSend(ZERO, this.generate_keyPair(buffer));
+                    break;
+                case STORE_MASTER:
+                    this.store_master(buffer, HEADER_LEN);
+                    apdu.setOutgoing();
+                    break;
+                case STORE_TOPIC_KEY:
+                    this.store_topic_key(buffer, HEADER_LEN, LEN);
+                    this.store_key(buffer, ZERO, P1);
+                    apdu.setOutgoing();
+                    break;
+                case ENCODE:
+                    this.encode(apdu, buffer, HEADER_LEN, LEN, P1);
+                    break;
+                case DECODE:
+                    this.decode(apdu, buffer, HEADER_LEN, LEN, P1);
+                    break;
 
-            // crypto tests
-            case RSA_SIGN:
-                if (P2 == 1) {
-                    this.rsa_sign(buffer, HEADER_LEN, LEN);
-                }
-                apdu.setOutgoingAndSend(ZERO, this.rsa_sign(buffer, HEADER_LEN, LEN));
-                break;
-            case RSA_VERIFY:
-                if (P2 == 1) {
-                    this.rsa_verify(buffer, HEADER_LEN, LEN);
-                }
-                buffer[0] = this.rsa_verify(buffer, HEADER_LEN, LEN);
-                apdu.setOutgoingAndSend(ZERO, ONE);
-                break;
-            case RSA_ENC:
-                if (P2 == 1) {
-                    this.rsa_encrypt(buffer, HEADER_LEN, LEN);
-                }
-                apdu.setOutgoingAndSend(ZERO, this.rsa_encrypt(buffer, HEADER_LEN, LEN));
-                break;
-            case RSA_DEC:
-                if (P2 == 1) {
-                    this.rsa_decrypt(buffer, HEADER_LEN, LEN);
-                }
-                apdu.setOutgoingAndSend(ZERO, this.rsa_decrypt(buffer, HEADER_LEN, LEN));
-                break;
+                // crypto tests
+                case RSA_SIGN:
+                    if (P2 == 1) {
+                        this.rsa_sign(buffer, HEADER_LEN, LEN);
+                    }
+                    apdu.setOutgoingAndSend(ZERO, this.rsa_sign(buffer, HEADER_LEN, LEN));
+                    break;
+                case RSA_VERIFY:
+                    if (P2 == 1) {
+                        this.rsa_verify(buffer, HEADER_LEN, LEN);
+                    }
+                    buffer[0] = this.rsa_verify(buffer, HEADER_LEN, LEN);
+                    apdu.setOutgoingAndSend(ZERO, ONE);
+                    break;
+                case RSA_ENC:
+                    if (P2 == 1) {
+                        this.rsa_encrypt(buffer, HEADER_LEN, LEN);
+                    }
+                    apdu.setOutgoingAndSend(ZERO, this.rsa_encrypt(buffer, HEADER_LEN, LEN));
+                    break;
+                case RSA_DEC:
+                    if (P2 == 1) {
+                        this.rsa_decrypt(buffer, HEADER_LEN, LEN);
+                    }
+                    apdu.setOutgoingAndSend(ZERO, this.rsa_decrypt(buffer, HEADER_LEN, LEN));
+                    break;
 
-            case STORE_KEY:
-                this.store_key(buffer, HEADER_LEN, P1);
-                apdu.setOutgoingAndSend(HEADER_LEN, LEN);
-                break;
-            case HMAC_SIGN:
-                if (P2 == 1) {
+                case STORE_KEY:
+                    this.store_key(buffer, HEADER_LEN, P1);
+                    apdu.setOutgoingAndSend(HEADER_LEN, LEN);
+                    break;
+                case HMAC_SIGN:
+                    if (P2 == 1) {
+                        this.hmac(buffer, HEADER_LEN, LEN, P1, buffer, ZERO);
+                    }
                     this.hmac(buffer, HEADER_LEN, LEN, P1, buffer, ZERO);
-                }
-                this.hmac(buffer, HEADER_LEN, LEN, P1, buffer, ZERO);
-                apdu.setOutgoingAndSend(ZERO, MessageDigest.LENGTH_SHA_256);
-                break;
-            case HMAC_VERIFY:
-                if (P2 == 1) {
-                    this.verify_hmac(buffer, HEADER_LEN, LEN, P1);
-                }
-                buffer[0] = this.verify_hmac(buffer, HEADER_LEN, LEN, P1);
-                apdu.setOutgoingAndSend(ZERO, ONE);
-                break;
-            case AES_ENC:
-                if (P2 == 1) {
-                    this.aes_encrypt(buffer, HEADER_LEN, LEN, P1, ZERO, ZERO);
-                }
-                apdu.setOutgoingAndSend(ZERO, this.aes_encrypt(buffer, HEADER_LEN, LEN, P1, ZERO, ZERO));
-                break;
-            case AES_DEC:
-                if (P2 == 1) {
-                    this.aes_decrypt(buffer, HEADER_LEN, LEN, P1, ZERO);
-                }
-                apdu.setOutgoingAndSend(ZERO, this.aes_decrypt(buffer, HEADER_LEN, LEN, P1, ZERO));
-                break;
+                    apdu.setOutgoingAndSend(ZERO, MessageDigest.LENGTH_SHA_256);
+                    break;
+                case HMAC_VERIFY:
+                    if (P2 == 1) {
+                        this.verify_hmac(buffer, HEADER_LEN, LEN, P1);
+                    }
+                    buffer[0] = this.verify_hmac(buffer, HEADER_LEN, LEN, P1);
+                    apdu.setOutgoingAndSend(ZERO, ONE);
+                    break;
+                case AES_ENC:
+                    if (P2 == 1) {
+                        this.aes_encrypt(buffer, HEADER_LEN, LEN, P1, ZERO, ZERO);
+                    }
+                    apdu.setOutgoingAndSend(ZERO, this.aes_encrypt(buffer, HEADER_LEN, LEN, P1, ZERO, ZERO));
+                    break;
+                case AES_DEC:
+                    if (P2 == 1) {
+                        this.aes_decrypt(buffer, HEADER_LEN, LEN, P1, ZERO);
+                    }
+                    apdu.setOutgoingAndSend(ZERO, this.aes_decrypt(buffer, HEADER_LEN, LEN, P1, ZERO));
+                    break;
 
-            // troughput tests
-            case TEST_SEND:
-                apdu.setOutgoingAndSend(ZERO, ZERO);
-                break;
-            case TEST_RECEIVE:
-                apdu.setOutgoingAndSend(ZERO, Util.getShort(buffer, ISO7816.OFFSET_P1));
-                break;
+                // troughput tests
+                case TEST_SEND:
+                    apdu.setOutgoingAndSend(ZERO, ZERO);
+                    break;
+                case TEST_RECEIVE:
+                    apdu.setOutgoingAndSend(ZERO, Util.getShort(buffer, ISO7816.OFFSET_P1));
+                    break;
 
-            default:
-                ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+                default:
+                    ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+            }
+        } catch (CardRuntimeException exception) {
+            Util.setShort(buffer, ZERO, exception.getReason());
+            apdu.setOutgoingAndSend(ZERO, (short) 2);
         }
     }
 
@@ -320,13 +330,13 @@ public class ClientApplet extends Applet implements ExtendedLength
         apdu.setOutgoingAndSend(ZERO, plain_len);
     }
 
-    private short rsa_sign(byte[] buffer, short offset, short length)
+    private short rsa_sign(byte[] buffer, short offset, short length) throws CryptoException
     {
         this.signature.init(this.keyPair.getPrivate(), Signature.MODE_SIGN);
         return this.signature.sign(buffer, offset, length, buffer, ZERO);
     }
 
-    private byte rsa_verify(byte[] buffer, short offset, short length)
+    private byte rsa_verify(byte[] buffer, short offset, short length) throws CryptoException
     {
         this.signature.init(this.masterKey, Signature.MODE_VERIFY);
         short rsa_data_len = (short) (length - RSA_SIGN_LEN);
@@ -401,7 +411,6 @@ public class ClientApplet extends Applet implements ExtendedLength
 
         return len;
     }
-
 
     private byte verify_hmac(byte[] buffer, short offset, short length, short key_index)
     {

@@ -116,7 +116,7 @@ void hmacTest()
 {
     log("> starting tests...");
 
-    size_t key_index = 250;
+    size_t key_index = 0;
 
     card->storeTopicKey(topic_key_pair.getValue(), key_index);
 

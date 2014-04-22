@@ -6,24 +6,14 @@ CryptoPP::AutoSeededRandomPool prng;
 namespace cdax {
 
     /**
-     * Empty contructor
-     */
-    RSAKeyPair::RSAKeyPair()
-    {
-
-    }
-
-    /**
      * Construct a new RSA keypair using the RSa params
      *
      * @param params CryptoPP::InvertibleRSAFunction params
      */
     RSAKeyPair::RSAKeyPair(int length)
     {
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(prng, length);
-        this->privateKey = CryptoPP::RSA::PrivateKey(params);
-        this->publicKey = CryptoPP::RSA::PublicKey(params);
+        this->privateKey.GenerateRandomWithKeySize(prng, length);
+        this->publicKey = CryptoPP::RSA::PublicKey(this->privateKey);
     }
 
     RSAKeyPair::RSAKeyPair(CryptoPP::RSA::PublicKey pub, CryptoPP::RSA::PrivateKey priv)

@@ -69,7 +69,7 @@ void testRSA()
 
     std::cout << "RSA plaintext: " << msg->getData().hex() << std::endl;
 
-    RSAKeyPair* keypair = new RSAKeyPair(length);
+    RSAKeyPair* keypair = new RSAKeyPair(2048);
 
     msg->encrypt(keypair->getPublic());
     std::cout << "RSA ciphertext: " << msg->getData().hex() << std::endl;
@@ -88,7 +88,7 @@ void testEncode()
 {
     Message msg = Message("foo", "bar", "baz");
 
-    RSAKeyPair* keypair = new RSAKeyPair(length);
+    RSAKeyPair* keypair = new RSAKeyPair(2048);
     bytestring key = generateKey(16);
 
     msg.encrypt(keypair->getPublic());

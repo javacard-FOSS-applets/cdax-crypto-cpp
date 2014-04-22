@@ -105,17 +105,18 @@ int main(int argc, char* argv[])
 
     // connect smart card
     cdax::SmartCard *card = new cdax::SmartCard();
-    card->setDebug(false);
-    card->storeTopicKey(key);
 
     if (!card->connect()) {
         return 1;
     }
 
-    cdax::RSAKeyPair *keypair = new cdax::RSAKeyPair(2048);
-    clientPub = card->initialize(keypair->getPublic());
+    card->setDebug(true);
+    card->storeTopicKey(key);
 
     /*
+
+    cdax::RSAKeyPair *keypair = new cdax::RSAKeyPair(2048);
+    clientPub = card->initialize(keypair->getPublic());
 
     openLogFile(file, "aes_encrypt");
 
@@ -309,6 +310,8 @@ int main(int argc, char* argv[])
         end(card, file, i, mean);
     }
 
+    */
+
     openLogFile(file, "hmac");
 
     for (int i = 0; i < 10; i++) {
@@ -357,7 +360,7 @@ int main(int argc, char* argv[])
         end(card, file, i, mean);
     }
 
-    */
+    /*
 
     openLogFile(file, "rsa_encrypt");
 
@@ -449,9 +452,7 @@ int main(int argc, char* argv[])
         end(card, file, i, mean);
     }
 
-
-
-
+    */
 
     card->release();
 
