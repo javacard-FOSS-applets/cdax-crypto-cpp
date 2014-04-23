@@ -5,6 +5,11 @@ CryptoPP::AutoSeededRandomPool prng;
 
 namespace cdax {
 
+    RSAKeyPair::RSAKeyPair()
+    {
+
+    }
+
     /**
      * Construct a new RSA keypair using the RSa params
      *
@@ -20,6 +25,11 @@ namespace cdax {
     {
         this->publicKey = pub;
         this->privateKey = priv;
+    }
+
+    RSAKeyPair::~RSAKeyPair()
+    {
+
     }
 
     void RSAKeyPair::setPublic(CryptoPP::RSA::PublicKey pub)
@@ -49,30 +59,6 @@ namespace cdax {
     {
         return this->publicKey;
     }
-
-    // template <class T>
-    // void RSAKeyPair::saveKey(std::string filename, T key)
-    // {
-    //     CryptoPP::ByteQueue queue;
-    //     key.Save(queue);
-    //     CryptoPP::FileSink file(filename.c_str());
-    //     queue.CopyTo(file);
-    //     file.MessageEnd();
-    // }
-
-    // template <class T>
-    // T RSAKeyPair::loadKey(std::string filename)
-    // {
-    //     T key;
-    //     CryptoPP::ByteQueue queue;
-    //     CryptoPP::FileSource file(filename.c_str(), true);
-
-    //     file.TransferTo(queue);
-    //     queue.MessageEnd();
-
-    //     key.Load(queue);
-    //     return key;
-    // }
 
     void RSAKeyPair::saveKey(std::string filename, CryptoPP::RSA::PrivateKey key)
     {
