@@ -18,7 +18,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 
-#include "../card/SmartCard.hpp"
 #include "Common.hpp"
 
 namespace cdax {
@@ -118,23 +117,6 @@ namespace cdax {
 
         void sign(CryptoPP::RSA::PrivateKey key);
         bool verify(CryptoPP::RSA::PublicKey key);
-
-        bool sign(SmartCard* card);
-        bool verify(SmartCard* card);
-
-        bool encrypt(SmartCard* card);
-        bool decrypt(SmartCard* card);
-
-        bool hmac(SmartCard* card, size_t key_index = 0);
-        bool hmacVerify(SmartCard* card, size_t key_index = 0);
-
-        bool aesEncrypt(SmartCard* card, size_t key_index = 0);
-        bool aesDecrypt(SmartCard* card, size_t key_index = 0);
-
-        bool handleTopicKeyResponse(SmartCard* card, size_t key_index = 0);
-
-        bool encode(SmartCard* card, size_t key_index = 0);
-        bool decode(SmartCard* card, size_t key_index = 0);
     };
 
 }

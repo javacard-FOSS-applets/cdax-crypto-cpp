@@ -1,12 +1,10 @@
 
 #include <ctime>
 #include <sys/stat.h>
-
-#include "card/SmartCard.hpp"
 #include "shared/Message.hpp"
 
 std::vector<double> timer;
-const std::string DIRECTORY = "../../paper/shapes/data/";
+const std::string DIRECTORY = "data/";
 std::string hostname;
 
 double getTimerMean()
@@ -33,7 +31,7 @@ void openLogFile(std::ofstream& file, const std::string name)
     std::string dir = DIRECTORY + hostname;
     mkdir(dir.c_str(), 0777);
     std::string filename = dir + "/" + name + ".dat";
-    file.open (filename);
+    file.open (filename.c_str());
     file << "bytes\tmilliseconds\terror" << std::endl;
 }
 
@@ -49,20 +47,6 @@ void end(std::ofstream& file, int index)
         int len = 2 << index;
         file << len << "\t" << getTimerMean() << "\t" << getTimerStdev() << std::endl;
         std::cout << "> " << len << " in " << getTimerMean() << " +- " << getTimerStdev() << std::endl;
-    }
-}
-
-void end(cdax::SmartCard *card, std::ofstream& file, int index, double mean = 0.0)
-{
-    if (index > 1) {
-        int len = 2 << index;
-
-        std::cout << "> single: " << mean << std::endl;
-        std::cout << "> double: " << card->getTimerMean() << std::endl;
-
-        mean = card->getTimerMean() - mean;
-        file << len << "\t" << mean << "\t" << card->getTimerStdev() << std::endl;
-        std::cout << "> " << len << " in " << mean << " +- " << card->getTimerStdev() << std::endl;
     }
 }
 
@@ -85,7 +69,6 @@ int main(int argc, char* argv[])
 {
     struct timeval start_time;
     int len;
-    int card_repeat = 0;
     cdax::bytestring data;
     std::ofstream file;
     double mean;
@@ -106,24 +89,13 @@ int main(int argc, char* argv[])
     prng.GenerateBlock(key.BytePtr(), key.size());
     CryptoPP::RSA::PublicKey clientPub;
 
-    // connect smart card
-    cdax::SmartCard *card = new cdax::SmartCard();
-
-    if (!card->connect()) {
-        return 1;
-    }
-
-    card->setDebug(true);
-    card->storeTopicKey(key);
-
     cdax::RSAKeyPair *keypair = new cdax::RSAKeyPair(2048);
-    clientPub = card->initialize(keypair->getPublic());
 
     openLogFile(file, "aes_encrypt");
 
     for (int i = 0; i < 10; i++) {
         len = init(i);
-        for (int r = 0; r <= 1000; r++) {
+        for (int r = 0; r <= 100; r++) {
             msg.setData(cdax::bytestring(len));
             start_time = start(len);
             msg.aesEncrypt(key);
@@ -136,7 +108,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 10; i++) {
         len = init(i);
-        for (int r = 0; r <= 1000; r++) {
+        for (int r = 0; r <= 100; r++) {
             msg.setData(cdax::bytestring(len));
             msg.aesEncrypt(key);
             start_time = start(len);
@@ -150,7 +122,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 10; i++) {
         len = init(i);
-        for (int r = 0; r <= 1000; r++) {
+        for (int r = 0; r <= 100; r++) {
             msg.setData(cdax::bytestring(len));
             start_time = start(len);
             msg.hmac(key);
@@ -163,7 +135,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 10; i++) {
         len = init(i);
-        for (int r = 0; r <= 1000; r++) {
+        for (int r = 0; r <= 100; r++) {
             msg.setData(cdax::bytestring(len));
             msg.hmac(key);
             start_time = start(len);
@@ -177,7 +149,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 7; i++) {
         len = init(i);
-        for (int r = 0; r <= 100; r++) {
+        for (int r = 0; r <= 10; r++) {
             msg.setData(cdax::bytestring(len));
             start_time = start(len);
             msg.encrypt(keypair->getPublic());
@@ -190,7 +162,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 7; i++) {
         len = init(i);
-        for (int r = 0; r <= 100; r++) {
+        for (int r = 0; r <= 10; r++) {
             msg.setData(cdax::bytestring(len));
             msg.encrypt(keypair->getPublic());
             start_time = start(len);
@@ -204,7 +176,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 7; i++) {
         len = init(i);
-        for (int r = 0; r <= 100; r++) {
+        for (int r = 0; r <= 10; r++) {
             msg.setData(cdax::bytestring(len));
             start_time = start(len);
             msg.sign(keypair->getPrivate());
@@ -217,7 +189,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 7; i++) {
         len = init(i);
-        for (int r = 0; r <= 100; r++) {
+        for (int r = 0; r <= 10; r++) {
             msg.setData(cdax::bytestring(len));
             msg.sign(keypair->getPrivate());
             start_time = start(len);
@@ -231,7 +203,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 10; i++) {
         len = init(i);
-        for (int r = 0; r <= 1000; r++) {
+        for (int r = 0; r <= 10; r++) {
             msg.setData(cdax::bytestring(len));
             start_time = start(len);
             msg.aesEncrypt(key);
@@ -245,7 +217,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 10; i++) {
         len = init(i);
-        for (int r = 0; r <= 1000; r++) {
+        for (int r = 0; r <= 10; r++) {
             msg.setData(cdax::bytestring(len));
             msg.aesEncrypt(key);
             msg.hmac(key);
@@ -256,195 +228,4 @@ int main(int argc, char* argv[])
         }
         end(file, i);
     }
-
-    hostname = "sc-80";
-
-    openLogFile(file, "aes_encrypt");
-
-    for (int i = 0; i < 10; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.addPKCS7();
-            data = msg.getData();
-            card->transmit(0x30, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.addPKCS7();
-            data = msg.getData();
-            card->transmit(0x30, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    openLogFile(file, "aes_decrypt");
-
-    for (int i = 0; i < 10; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.aesEncrypt(key);
-            data = msg.getData();
-            card->transmit(0x31, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.aesEncrypt(key);
-            data = msg.getData();
-            card->transmit(0x31, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    openLogFile(file, "hmac");
-
-    for (int i = 0; i < 10; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            data = msg.getPayload();
-            card->transmit(0x20, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            data = msg.getPayload();
-            card->transmit(0x20, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    openLogFile(file, "hmac_verify");
-
-    for (int i = 0; i < 10; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.hmac(key);
-            data = msg.getPayload();
-            data += msg.getSignature();
-            card->transmit(0x21, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.hmac(key);
-            data = msg.getPayload();
-            data += msg.getSignature();
-            card->transmit(0x21, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    openLogFile(file, "rsa_encrypt");
-
-    for (int i = 0; i < 7; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            card->transmit(0x12, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            card->transmit(0x12, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    openLogFile(file, "rsa_decrypt");
-
-    for (int i = 0; i < 7; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.encrypt(clientPub);
-            data = msg.getData();
-            card->transmit(0x13, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.encrypt(clientPub);
-            data = msg.getData();
-            card->transmit(0x13, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    openLogFile(file, "rsa_sign");
-
-    for (int i = 0; i < 7; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            data = msg.getPayload();
-            card->transmit(0x10, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            data = msg.getPayload();
-            card->transmit(0x10, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    openLogFile(file, "rsa_verify");
-
-    for (int i = 0; i < 7; i++) {
-        len = 2 << i;
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.sign(keypair->getPrivate());
-            data = msg.getPayload();
-            data += msg.getSignature();
-            card->transmit(0x11, data);
-        }
-        mean = card->getTimerMean();
-        card->startTimer();
-        for (int r = 0; r <= card_repeat; r++) {
-            data.resize(len);
-            msg.setData(data);
-            msg.sign(keypair->getPrivate());
-            data = msg.getPayload();
-            data += msg.getSignature();
-            card->transmit(0x11, data, 0x00, 0x01);
-        }
-        end(card, file, i, mean);
-    }
-
-    card->release();
-
 }

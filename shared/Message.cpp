@@ -138,7 +138,7 @@ namespace cdax {
     {
         this->timestamp = 0;
         size_t size = message_timestamp.size();
-        for (int i = 0; i < size; i++) {
+        for (size_t i = 0; i < size; i++) {
             this->timestamp = (this->timestamp << 8) | (message_timestamp[i] & 0xFF);
         }
     }
@@ -148,7 +148,7 @@ namespace cdax {
     {
         size_t time_len = sizeof(this->timestamp);
         bytestring message_timestamp(time_len);
-        for (int i = 0; i < time_len; i++) {
+        for (size_t i = 0; i < time_len; i++) {
             message_timestamp[time_len - 1 - i] = (this->timestamp >> (i * 8)) & 0xFF;
         }
         return message_timestamp;
@@ -333,128 +333,13 @@ namespace cdax {
         }
     }
 
-    bool Message::sign(SmartCard* card)
-    {
-        bytestring buffer = this->getPayload();
-        if (!card->sign(buffer)) {
-            return false;
-        }
-        this->signature = buffer;
-
-        return true;
-    }
-
-    bool Message::verify(SmartCard* card)
-    {
-        bytestring buffer = this->getPayload();
-        buffer.Assign(buffer + this->signature);
-        return card->verify(buffer);
-    }
-
-    bool Message::encrypt(SmartCard* card)
-    {
-        return card->encrypt(this->data);
-    }
-
-    bool Message::decrypt(SmartCard* card)
-    {
-        return card->decrypt(this->data);
-    }
-
-    bool Message::aesEncrypt(SmartCard* card, size_t key_index)
-    {
-        this->addPKCS7();
-
-        if (!card->aesEncrypt(this->data, key_index)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    bool Message::aesDecrypt(SmartCard* card, size_t key_index)
-    {
-        bytestring buffer = this->data;
-        if (!card->aesDecrypt(this->data, key_index)) {
-            return false;
-        }
-
-        this->removePKCS7();
-
-        return true;
-    }
-
-    bool Message::hmac(SmartCard* card, size_t key_index)
-    {
-        bytestring buffer = this->getPayload();
-        if (!card->hmac(buffer, key_index)) {
-            return false;
-        }
-        this->signature = buffer;
-
-        return true;
-    }
-
-    bool Message::hmacVerify(SmartCard* card, size_t key_index)
-    {
-        bytestring buffer;
-        buffer += this->getPayload();
-        buffer += this->getSignature();
-        return card->hmacVerify(buffer, key_index);
-    }
-
-    bool Message::handleTopicKeyResponse(SmartCard* card, size_t key_index)
-    {
-        bytestring buffer;
-        buffer.Assign(this->getDataLength() + this->getPayload() + this->getSignature());
-
-        return card->handleTopicKeyResponse(buffer, key_index);
-    }
-
-
-    bool Message::encode(SmartCard* card, size_t key_index)
-    {
-        this->addPKCS7();
-
-        bytestring buffer;
-        buffer.Assign(this->getDataLength() + this->getPayload());
-
-        if (!card->encode(buffer, key_index)) {
-            return false;
-        }
-
-        size_t data_len = buffer.size();
-        if (data_len > 32) {
-            this->signature = buffer.str().substr(data_len - 32, 32);
-            this->data = buffer.str().substr(0, data_len - 32);
-        }
-
-        return true;
-    }
-
-
-    bool Message::decode(SmartCard* card, size_t key_index)
-    {
-        bytestring buffer;
-        buffer.Assign(this->getDataLength() + this->getPayload() + this->getSignature());
-
-        if (!card->decode(buffer, key_index)) {
-            return false;
-        }
-
-        this->setData(buffer);
-        this->removePKCS7();
-
-        return true;
-    }
-
     void Message::addPKCS7()
     {
         // add pkcs7 padding
         size_t size = this->data.size();
         size_t padding = CryptoPP::AES::BLOCKSIZE - (size % CryptoPP::AES::BLOCKSIZE);
         this->data.resize(size + padding);
-        for (int i = size; i < size + padding; i++) {
+        for (size_t i = size; i < size + padding; i++) {
             this->data[i] = padding;
         }
     }

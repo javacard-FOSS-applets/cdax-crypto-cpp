@@ -27,8 +27,6 @@ namespace cdax {
 
         std::string last_error;
         std::string reader;
-
-        bool debug = false;
         std::vector<double> timer;
 
         bool selectReader();
@@ -40,8 +38,6 @@ namespace cdax {
 
         bool selectApplet();
         std::string getError();
-
-        void setDebug(bool value);
 
         bool transmit(byte instruction, bytestring &data, byte p1 = 0x00, byte p2 = 0x00);
 

@@ -8,11 +8,6 @@ namespace cdax {
         return this->last_error;
     }
 
-    void SmartCard::setDebug(bool value)
-    {
-        this->debug = value;
-    }
-
     bool SmartCard::selectReader()
     {
         // get context
@@ -165,7 +160,7 @@ namespace cdax {
             data.Assign(header + data);
         }
 
-        if (this->debug) {
+        if (true) {
             std::cout << "> send: " << data.hex() << std::endl;
         }
 
@@ -191,7 +186,7 @@ namespace cdax {
 
         data.Assign(response_buffer.BytePtr(), resp_buf_len);
 
-        if (this->debug) {
+        if (true) {
             std::cout << "> recv: " << data.hex() << std::endl;
         }
 

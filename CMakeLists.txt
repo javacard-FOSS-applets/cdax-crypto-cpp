@@ -6,10 +6,7 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake" )
 
 # update definitions and flags
 
-set( CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-unused-variable ${CMAKE_CXX_FLAGS}" )
-add_definitions(
-    -std=c++11
-)
+set( CMAKE_CXX_FLAGS "-std=c++0x -Wall -fpermissive -Wno-unused-variable ${CMAKE_CXX_FLAGS}" )
 
 # boost and cryptopp
 find_package( Boost COMPONENTS system thread serialization REQUIRED )
@@ -61,7 +58,6 @@ add_executable( msg_test MessageTest
 target_link_libraries( msg_test ${LIBS} )
 
 add_executable( msg_benchmark MessageBenchmark
-    card/SmartCard
     shared/Message
     shared/bytestring
     shared/TopicKeyPair
@@ -71,7 +67,6 @@ add_executable( msg_benchmark MessageBenchmark
 target_link_libraries( msg_benchmark ${LIBS} )
 
 add_executable( benchmark_test BenchmarkTest
-    card/SmartCard
     shared/Message
     shared/bytestring
     shared/TopicKeyPair
