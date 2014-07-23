@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 {
     struct timeval start_time;
     int len;
-    int card_repeat = 0;
+    int card_repeat = 100;
     cdax::bytestring data;
     std::ofstream file;
     double mean;

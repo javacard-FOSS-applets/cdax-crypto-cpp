@@ -56,7 +56,7 @@ void throughputBenchmark()
 
     bytestring data;
     // 16 * 64 = 1024 bytes
-    int len, start = 0, repeat = 10, step = 16, max = 64;
+    int len, start = 0, repeat = 100, step = 16, max = 64;
     byte p1, p2;
 
     std::ofstream file;
@@ -140,7 +140,7 @@ void cryptoBenchmark()
 
     bytestring data;
     // 16 * 64 = 1024 bytes
-    int len, start = 1, repeat = 10, step = 16, max = 64;
+    int len, start = 1, repeat = 100, step = 16, max = 64;
 
     std::ofstream file;
     openLogFile(file, "hmac.dat");
@@ -219,7 +219,7 @@ void rsaBenchmark()
 
     bytestring data;
     // the maximum for this public key is 245 bytes (8 * 30 = 240)
-    int len, start = 1, repeat = 1, step = 8, max = 30;
+    int len, start = 1, repeat = 100, step = 8, max = 30;
     std::ofstream file;
 
     RSAKeyPair serverKeyPair = RSAKeyPair(2048);
@@ -328,7 +328,7 @@ void highLevelBenchmark()
     Message msg("test_id", "test_topic", "test_data");
 
     bytestring data;
-    int len, start = 1, repeat = 10, step = 16, max = 64;
+    int len, start = 1, repeat = 100, step = 16, max = 64;
     std::ofstream file;
 
     RSAKeyPair serverKeyPair = RSAKeyPair(2048);
