@@ -121,12 +121,8 @@ namespace cdax {
      */
     RSAKeyPair SecurityServer::generateKeyPair(size_t length)
     {
-        // Generate Parameters
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(prng, length);
-
         // return keypair
-        RSAKeyPair keyPair(params);
+        RSAKeyPair keyPair(length);
         return keyPair;
     }
 
