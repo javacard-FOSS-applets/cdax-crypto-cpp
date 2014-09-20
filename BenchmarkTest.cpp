@@ -56,7 +56,7 @@ void throughputBenchmark()
 
     bytestring data;
     // 16 * 64 = 1024 bytes
-    int len, start = 0, repeat = 10, step = 16, max = 64;
+    int len, start = 0, repeat = 100, step = 16, max = 64;
     byte p1, p2;
 
     std::ofstream file;
@@ -108,7 +108,7 @@ void throughputBenchmark()
 
     file << std::endl;
     file.close();
-
+    card->release();
 }
 
 void cryptoBenchmark()
@@ -140,7 +140,7 @@ void cryptoBenchmark()
 
     bytestring data;
     // 16 * 64 = 1024 bytes
-    int len, start = 1, repeat = 10, step = 16, max = 64;
+    int len, start = 1, repeat = 100, step = 16, max = 64;
 
     std::ofstream file;
     openLogFile(file, "hmac.dat");
@@ -203,7 +203,7 @@ void cryptoBenchmark()
 
     file << std::endl;
     file.close();
-
+    card->release();
 }
 
 void rsaBenchmark()
@@ -212,21 +212,18 @@ void rsaBenchmark()
 
     SmartCard *card = new SmartCard();
 
-    card->setDebug(true);
+    card->setDebug(false);
 
     // message stub
     Message msg("test_id", "test_topic", "test_data");
 
     bytestring data;
     // the maximum for this public key is 245 bytes (8 * 30 = 240)
-    int len, start = 1, repeat = 1, step = 8, max = 30;
+    int len, start = 1, repeat = 100, step = 8, max = 30;
     std::ofstream file;
 
-    RSAKeyPair serverKeyPair;
-    CryptoPP::RSA::PublicKey clientPub;
-
-    serverKeyPair = RSAKeyPair(2048);
-    clientPub = serverKeyPair.getPublic();
+    RSAKeyPair serverKeyPair = RSAKeyPair(2048);
+    CryptoPP::RSA::PublicKey clientPub = serverKeyPair.getPublic();
 
     // Generate RSA Parameters
     if (card == NULL) {
@@ -316,6 +313,7 @@ void rsaBenchmark()
 
     file << std::endl;
     file.close();
+    card->release();
 }
 
 void highLevelBenchmark()
@@ -330,10 +328,10 @@ void highLevelBenchmark()
     Message msg("test_id", "test_topic", "test_data");
 
     bytestring data;
-    int len, start = 1, repeat = 10, step = 16, max = 64;
+    int len, start = 1, repeat = 100, step = 16, max = 64;
     std::ofstream file;
 
-    RSAKeyPair serverKeyPair;
+    RSAKeyPair serverKeyPair = RSAKeyPair(2048);
     CryptoPP::RSA::PublicKey clientPub;
 
     TopicKeyPair topic_key_pair = TopicKeyPair(
@@ -356,8 +354,6 @@ void highLevelBenchmark()
 
         serverKeyPair = RSAKeyPair(pub, priv);
     } else {
-        serverKeyPair = RSAKeyPair(2048);
-
         RSAKeyPair::saveKey("data/server-priv.key", serverKeyPair.getPrivate());
         RSAKeyPair::saveKey("data/server-pub.key", serverKeyPair.getPublic());
     }
@@ -403,7 +399,6 @@ void highLevelBenchmark()
 
     msg.setSignature("");
 
-
     openLogFile(file, "topic_encode.dat");
 
     std::cout << "TOPIC ENCODE:" << std::endl;
@@ -436,7 +431,7 @@ void highLevelBenchmark()
 
     file << std::endl;
     file.close();
-
+    card->release();
 }
 
 /**
@@ -447,10 +442,10 @@ void highLevelBenchmark()
  */
 int main(int argc, char* argv[])
 {
-    // throughputBenchmark();
-    // cryptoBenchmark();
+    throughputBenchmark();
+    cryptoBenchmark();
     rsaBenchmark();
-    // highLevelBenchmark();
+    highLevelBenchmark();
 
     return 0;
 }

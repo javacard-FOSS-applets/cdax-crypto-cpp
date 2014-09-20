@@ -37,6 +37,7 @@ public class ClientApplet extends Applet implements ExtendedLength
 
     private static final byte GEN_KEYPAIR = (byte) 0x01;
     private static final byte STORE_MASTER = (byte) 0x02;
+    private static final byte CREATE_TOPIC_JOIN = (byte) 0x04;
     private static final byte STORE_TOPIC_KEY = (byte) 0x07;
 
     private static final byte ENCODE = (byte) 0x08;
@@ -160,6 +161,9 @@ public class ClientApplet extends Applet implements ExtendedLength
                 case STORE_MASTER:
                     this.store_master(buffer, HEADER_LEN);
                     apdu.setOutgoing();
+                    break;
+                case CREATE_TOPIC_JOIN:
+                    aapdu.setOutgoingAndSend(ZERO, this.rsa_sign(buffer, HEADER_LEN, LEN));
                     break;
                 case STORE_TOPIC_KEY:
                     this.store_topic_key(buffer, HEADER_LEN, LEN);

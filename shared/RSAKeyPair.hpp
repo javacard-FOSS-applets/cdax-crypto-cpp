@@ -21,20 +21,17 @@ namespace cdax {
     public:
         static const int KeyLength = 2048;
 
+        RSAKeyPair();
         RSAKeyPair(int length);
         RSAKeyPair(CryptoPP::RSA::PublicKey pub, CryptoPP::RSA::PrivateKey priv);
+
+        ~RSAKeyPair();
 
         void setPublic(CryptoPP::RSA::PublicKey pub);
         void setPrivate(CryptoPP::RSA::PrivateKey priv);
 
         CryptoPP::RSA::PublicKey getPublic();
         CryptoPP::RSA::PrivateKey getPrivate();
-
-        // template <class T>
-        // static void saveKey(std::string filename, T key);
-
-        // template <class T>
-        // static T loadKey(std::string filename);
 
         static void saveKey(std::string filename, CryptoPP::RSA::PublicKey key);
         static void saveKey(std::string filename, CryptoPP::RSA::PrivateKey key);

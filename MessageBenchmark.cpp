@@ -1,5 +1,6 @@
 
 #include <ctime>
+#include <sys/stat.h>
 
 #include "card/SmartCard.hpp"
 #include "shared/Message.hpp"
@@ -29,7 +30,9 @@ void openLogFile(std::ofstream& file, const std::string name)
     }
 
     std::cout << ">>>> " << name << std::endl;
-    std::string filename = DIRECTORY + hostname + "/" + name + ".dat";
+    std::string dir = DIRECTORY + hostname;
+    mkdir(dir.c_str(), 0777);
+    std::string filename = dir + "/" + name + ".dat";
     file.open (filename);
     file << "bytes\tmilliseconds\terror" << std::endl;
 }
@@ -82,7 +85,7 @@ int main(int argc, char* argv[])
 {
     struct timeval start_time;
     int len;
-    int card_repeat = 0;
+    int card_repeat = 100;
     cdax::bytestring data;
     std::ofstream file;
     double mean;
@@ -112,8 +115,6 @@ int main(int argc, char* argv[])
 
     card->setDebug(true);
     card->storeTopicKey(key);
-
-    /*
 
     cdax::RSAKeyPair *keypair = new cdax::RSAKeyPair(2048);
     clientPub = card->initialize(keypair->getPublic());
@@ -256,11 +257,7 @@ int main(int argc, char* argv[])
         end(file, i);
     }
 
-    */
-
     hostname = "sc-80";
-
-    /*
 
     openLogFile(file, "aes_encrypt");
 
@@ -310,8 +307,6 @@ int main(int argc, char* argv[])
         end(card, file, i, mean);
     }
 
-    */
-
     openLogFile(file, "hmac");
 
     for (int i = 0; i < 10; i++) {
@@ -359,8 +354,6 @@ int main(int argc, char* argv[])
         }
         end(card, file, i, mean);
     }
-
-    /*
 
     openLogFile(file, "rsa_encrypt");
 
@@ -451,8 +444,6 @@ int main(int argc, char* argv[])
         }
         end(card, file, i, mean);
     }
-
-    */
 
     card->release();
 
