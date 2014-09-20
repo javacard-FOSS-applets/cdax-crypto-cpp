@@ -264,17 +264,21 @@ public class ClientApplet extends Applet implements ExtendedLength
 
     private short generate_keyPair(byte[] buffer)
     {
-        this.keyPair.genKeyPair();
-        RSAPublicKey pub = (RSAPublicKey) this.keyPair.getPublic();
-        pub.getModulus(buffer, ZERO);
-        pub.getExponent(buffer, RSA_MOD_LEN);
-        return (short) (RSA_MOD_LEN + RSA_EXP_LEN);
+        if (!this.keyPair.getPublic().isInitialized()) {
+            this.keyPair.genKeyPair();
+            RSAPublicKey pub = (RSAPublicKey) this.keyPair.getPublic();
+            pub.getModulus(buffer, ZERO);
+            pub.getExponent(buffer, RSA_MOD_LEN);
+            return (short) (RSA_MOD_LEN + RSA_EXP_LEN);
+        }
     }
 
     private void store_master(byte[] buffer, short offset)
     {
-        this.masterKey.setModulus(buffer, offset, RSA_MOD_LEN);
-        this.masterKey.setExponent(buffer, (short) (offset + RSA_MOD_LEN), RSA_EXP_LEN);
+        if (!this.masterKey.isInitialized()) {
+            this.masterKey.setModulus(buffer, offset, RSA_MOD_LEN);
+            this.masterKey.setExponent(buffer, (short) (offset + RSA_MOD_LEN), RSA_EXP_LEN);
+        }
     }
 
     private void store_key(byte[] buffer, short offset, short key_index)
